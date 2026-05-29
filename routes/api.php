@@ -5,6 +5,7 @@ use App\Http\Controllers\API\NotificationController;
 use App\Http\Controllers\API\ServiceController;
 use App\Http\Controllers\API\TaskController;
 use App\Http\Controllers\API\TasksPastController;
+use App\Http\Controllers\API\UsersListController;
 use App\Http\Controllers\API\TasksRangeController;
 use App\Http\Controllers\API\TasksTodayController;
 use App\Http\Controllers\Mobile\ServicePropositionController;
@@ -18,6 +19,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::get('/notifications/unread-count', [NotificationController::class, 'getUnreadCount']);
     Route::get('/services', [ServiceController::class, 'getAll']);
+    Route::get('/users', UsersListController::class);
     Route::get('/tasks/today', TasksTodayController::class);
     Route::get('/tasks/range', TasksRangeController::class);
     Route::get('/tasks/past', TasksPastController::class);
