@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\NotificationController;
+use App\Http\Controllers\API\LeaveRequestController;
+use App\Http\Controllers\API\ProductController;
 use App\Http\Controllers\API\ServiceController;
 use App\Http\Controllers\API\TaskController;
 use App\Http\Controllers\API\TasksPastController;
@@ -23,6 +25,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/tasks/today', TasksTodayController::class);
     Route::get('/tasks/range', TasksRangeController::class);
     Route::get('/tasks/past', TasksPastController::class);
+    Route::get('/catalog/products', [ProductController::class, 'index']);
+    Route::get('/leave-requests', [LeaveRequestController::class, 'index']);
+    Route::post('/leave-requests', [LeaveRequestController::class, 'store']);
+    Route::put('/leave-requests/{id}', [LeaveRequestController::class, 'update'])->whereNumber('id');
+    Route::post('/leave-requests/{id}/cancel', [LeaveRequestController::class, 'cancel'])->whereNumber('id');
+    Route::delete('/leave-requests/{id}', [LeaveRequestController::class, 'destroy'])->whereNumber('id');
     Route::get('/tasks/{id}', [TaskController::class, 'show'])->whereNumber('id');
     Route::get('/tasks/{task}/events', [MobileTaskController::class, 'getTaskEvents'])->whereNumber('task');
     Route::get('/tasks/{task}/user-last-event', [MobileTaskController::class, 'getUserLastEventForTask'])->whereNumber('task');

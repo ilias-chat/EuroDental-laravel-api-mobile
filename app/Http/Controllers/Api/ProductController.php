@@ -14,10 +14,29 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
+        $user = $request->user();
+        $permissions = $user->profile
+            ? $user->profile->permissions->pluck('code')
+            : collect();
+
+        if (
+            ! $permissions->contains('mobile_stock')
+            && ! $permissions->contains('mobile_stock_read')
+        ) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $search = $request->search ?? $request->name;
+
         $products = Product::with(['category', 'subCategory', 'brand', 'image'])
-            ->when($request->name, fn($q) =>
-                $q->where('product_name', 'LIKE', "%{$request->name}%")
-            )
+            ->when($search, function ($query, $search) {
+                $term = '%' . mb_strtolower(addcslashes($search, '%_\\')) . '%';
+
+                return $query->where(function ($q) use ($term) {
+                    $q->whereRaw('LOWER(product_name) LIKE ?', [$term])
+                        ->orWhereRaw('LOWER(reference) LIKE ?', [$term]);
+                });
+            })
             ->when($request->category, fn($q) =>
                 $q->where('id_category', $request->category)
             )
