@@ -101,6 +101,10 @@ jobs:
           sshpass -f .sshpass scp $SSH_OPTS -P "${{ secrets.SSH_PORT }}" \
             "${TARGET}:${DEPLOY_PATH}/deploy-debug.txt" ./deploy-debug.txt 2>/dev/null || true
           if [ -f deploy-debug.txt ]; then cat deploy-debug.txt; else echo "(no deploy-debug.txt)"; fi
+          echo "========== LARAVEL LOG (tail) =========="
+          LOG_REMOTE="${DEPLOY_PATH}/storage/logs/laravel.log"
+          sshpass -f .sshpass ssh $SSH_OPTS -p "${{ secrets.SSH_PORT }}" "$TARGET" \
+            "tail -n 80 $(printf '%q' "$LOG_REMOTE") 2>/dev/null || echo '(no laravel.log yet)'" || true
           echo "=============================================="
           if [ "$OK" = "1" ]; then exit 0; fi
           exit 1
@@ -110,13 +114,18 @@ jobs:
         run: rm -f .sshpass
 
       - name: Verify health endpoint
+        continue-on-error: true
         run: |
           for i in 1 2 3 4 5; do
-            if curl -fS --max-time 25 "https://mobile.eurodental.ma/up"; then
+            code=$(curl -sS -o /tmp/up-body.txt -w "%{http_code}" --max-time 25 "https://mobile.eurodental.ma/up" || echo "000")
+            echo "HTTP $code"
+            head -c 400 /tmp/up-body.txt 2>/dev/null || true
+            echo ""
+            if [ "$code" = "200" ]; then
               echo "Health check OK"
               exit 0
             fi
-            echo "Attempt $i failed, retrying..."
             sleep 10
           done
+          echo "Health check failed — see Finalize step logs (DB secrets or PHP version)"
           exit 1

@@ -63,11 +63,19 @@ EOF
 chmod 644 "$INDEX_FILE"
 log "Wrote $INDEX_FILE"
 
-if [ -f "$DEPLOY_PATH/public/.htaccess" ]; then
-  cp "$DEPLOY_PATH/public/.htaccess" "$PUBLIC_HTML/.htaccess"
-  chmod 644 "$PUBLIC_HTML/.htaccess"
-  log "Copied .htaccess to public_html"
-fi
+{
+  if [ -f "$DEPLOY_PATH/scripts/hostinger-public_html.htaccess" ]; then
+    cat "$DEPLOY_PATH/scripts/hostinger-public_html.htaccess"
+  fi
+  if [ -f "$DEPLOY_PATH/public/.htaccess" ]; then
+    cat "$DEPLOY_PATH/public/.htaccess"
+  fi
+} > "$PUBLIC_HTML/.htaccess"
+chmod 644 "$PUBLIC_HTML/.htaccess"
+log "Wrote public_html/.htaccess (PHP 8.2 + Laravel rewrite)"
+
+touch "$DEPLOY_PATH/storage/logs/laravel.log" 2>/dev/null || true
+chmod -R 777 "$DEPLOY_PATH/storage" 2>/dev/null || true
 
 # Artisan optimize (best-effort; web can run without config:cache)
 if [ -z "$PHP_BIN" ]; then
@@ -92,6 +100,11 @@ log "=== config:cache ==="
 if ! "$PHP_BIN" artisan config:cache 2>&1 | tee -a "$DEBUG_LOG"; then
   log "WARN: config:cache failed"
   "$PHP_BIN" artisan config:clear 2>&1 | tee -a "$DEBUG_LOG" || true
+fi
+
+log "=== database connection test ==="
+if ! "$PHP_BIN" artisan db:show 2>&1 | tee -a "$DEBUG_LOG"; then
+  log "WARN: db:show failed — check GitHub secrets DB_HOST, DB_DATABASE, DB_USERNAME, DB_PASSWORD (Hostinger MySQL)"
 fi
 
 log "Deploy finished OK"
