@@ -5,7 +5,7 @@
  */
 function envLine(string $key, string $value): string
 {
-    if ($value === '' || preg_match('/\s#"\';\\\\]/', $value)) {
+    if ($value === '' || preg_match('/[\s#"\';\\\\]/', $value)) {
         $escaped = str_replace(['\\', '"'], ['\\\\', '\\"'], $value);
 
         return $key . '="' . $escaped . '"';
@@ -24,9 +24,16 @@ foreach ($required as $name) {
     }
 }
 
-$appKey = getenv('APP_KEY');
+$appKey = trim(getenv('APP_KEY'));
+$appKey = preg_replace('/^APP_KEY=/', '', $appKey);
+$appKey = trim($appKey, " \t\n\r\0\x0B\"'");
 if (! str_starts_with($appKey, 'base64:')) {
-    fwrite(STDERR, "APP_KEY must start with base64:\n");
+    fwrite(STDERR, "APP_KEY must start with base64: (paste only the key value in GitHub secrets)\n");
+    exit(1);
+}
+$decoded = base64_decode(substr($appKey, 7), true);
+if ($decoded === false || strlen($decoded) !== 32) {
+    fwrite(STDERR, "APP_KEY must decode to 32 bytes. Check the secret value.\n");
     exit(1);
 }
 
