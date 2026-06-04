@@ -26,19 +26,8 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
-          extensions: mbstring, xml, ctype, fileinfo, openssl, pdo_mysql, tokenizer, bcmath
+          extensions: dom, xml, mbstring, ctype, fileinfo, openssl, pdo_mysql, tokenizer, bcmath, curl
           coverage: none
-
-      - name: Install Composer dependencies
-        env:
-          # package:discover runs during composer scripts; needs a key before .env is built
-          APP_KEY: ${{ secrets.APP_KEY }}
-        run: |
-          if [ -z "$APP_KEY" ]; then
-            echo "APP_KEY secret is required for composer install (package:discover)."
-            exit 1
-          fi
-          composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
 
       - name: Build production .env
         env:
@@ -52,6 +41,10 @@ jobs:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           CORS_ALLOWED_ORIGINS: ${{ secrets.CORS_ALLOWED_ORIGINS }}
         run: |
+          if [ -z "$APP_KEY" ]; then
+            echo "APP_KEY secret is missing."
+            exit 1
+          fi
           APP_URL="${APP_URL:-https://mobile.eurodental.ma}"
           ASSET_URL="${ASSET_URL:-https://eurodental.ma}"
           {
@@ -80,6 +73,11 @@ jobs:
             echo "ASSET_URL=${ASSET_URL}"
             echo "CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}"
           } > .env
+
+      - name: Install Composer dependencies
+        run: |
+          composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --no-scripts
+          php artisan package:discover --ansi
 
       - name: Install sshpass
         run: sudo apt-get update && sudo apt-get install -y sshpass
