@@ -72,10 +72,10 @@ jobs:
           PHP_BIN: ${{ secrets.PHP_BIN }}
         run: |
           export PHP_BIN="${PHP_BIN:-/usr/bin/php}"
+          REMOTE_SCRIPT="$(printf '%q' "$DEPLOY_PATH/scripts/remote-optimize.sh")"
           sshpass -f .sshpass ssh -o StrictHostKeyChecking=no -p "${{ secrets.SSH_PORT }}" \
             "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
-            "export DEPLOY_PATH=$(printf '%q' "$DEPLOY_PATH") PHP_BIN=$(printf '%q' "$PHP_BIN"); bash -s" \
-            < scripts/remote-optimize.sh
+            "export DEPLOY_PATH=$(printf '%q' "$DEPLOY_PATH") PHP_BIN=$(printf '%q' "$PHP_BIN"); bash ${REMOTE_SCRIPT}"
 
       - name: Remove SSH password file
         if: always()
