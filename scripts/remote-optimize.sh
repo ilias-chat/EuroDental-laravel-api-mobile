@@ -109,27 +109,6 @@ fi
 log "PHP_BIN=$PHP_BIN"
 "$PHP_BIN" -v 2>&1 | tee -a "$DEBUG_LOG" || true
 
-log "=== composer install (vendor not rsynced) ==="
-COMPOSER_PHAR="$DEPLOY_PATH/composer.phar"
-if [ ! -f "$COMPOSER_PHAR" ]; then
-  log "Downloading composer.phar (one-time)..."
-  if ! "$PHP_BIN" -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"; then
-    log "ERROR: could not download Composer installer"
-    exit 1
-  fi
-  if ! "$PHP_BIN" composer-setup.php --install-dir="$DEPLOY_PATH" --filename=composer.phar 2>&1 | tee -a "$DEBUG_LOG"; then
-    log "ERROR: composer-setup.php failed"
-    rm -f composer-setup.php
-    exit 1
-  fi
-  rm -f composer-setup.php
-fi
-
-if ! "$PHP_BIN" "$COMPOSER_PHAR" install --no-dev --optimize-autoloader --no-interaction --no-scripts 2>&1 | tee -a "$DEBUG_LOG"; then
-  log "ERROR: composer install failed"
-  exit 1
-fi
-
 log "=== artisan --version ==="
 if ! "$PHP_BIN" artisan --version 2>&1 | tee -a "$DEBUG_LOG"; then
   log "WARN: artisan failed — public_html is still configured for HTTP"

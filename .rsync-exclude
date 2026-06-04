@@ -1,9 +1,5 @@
 .git
 .github
-vendor/
-storage/
-bootstrap/cache/
-composer.phar
 .env.example
 .env.backup
 .env.production
