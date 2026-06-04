@@ -85,16 +85,23 @@ jobs:
           PHP_BIN: ${{ secrets.PHP_BIN }}
         run: |
           SSH_OPTS="-o StrictHostKeyChecking=no -o ConnectTimeout=60 -o ServerAliveInterval=30"
+          TARGET="${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}"
           REMOTE_CMD="export DEPLOY_PATH=$(printf '%q' "$DEPLOY_PATH"); export PHP_BIN=$(printf '%q' "${PHP_BIN:-}"); sh $(printf '%q' "$DEPLOY_PATH/scripts/remote-optimize.sh")"
+          OK=0
           for attempt in 1 2 3; do
             echo "Optimize attempt ${attempt}/3..."
-            if sshpass -f .sshpass ssh $SSH_OPTS -p "${{ secrets.SSH_PORT }}" \
-              "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
-              "$REMOTE_CMD"; then
-              exit 0
+            if sshpass -f .sshpass ssh $SSH_OPTS -p "${{ secrets.SSH_PORT }}" "$TARGET" "$REMOTE_CMD"; then
+              OK=1
+              break
             fi
             sleep 10
           done
+          echo "========== SERVER DEPLOY DEBUG LOG =========="
+          sshpass -f .sshpass scp $SSH_OPTS -P "${{ secrets.SSH_PORT }}" \
+            "${TARGET}:${DEPLOY_PATH}/deploy-debug.txt" ./deploy-debug.txt 2>/dev/null || true
+          if [ -f deploy-debug.txt ]; then cat deploy-debug.txt; else echo "(no deploy-debug.txt)"; fi
+          echo "=============================================="
+          if [ "$OK" = "1" ]; then exit 0; fi
           exit 1
 
       - name: Remove SSH password file
