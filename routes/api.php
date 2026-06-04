@@ -20,7 +20,15 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanc
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
+
+    // Notifications (Ionic app + API clients)
+    Route::get('/notifications', [NotificationController::class, 'list']);
     Route::get('/notifications/unread-count', [NotificationController::class, 'getUnreadCount']);
+    Route::put('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead']);
+    Route::get('/notifications/{id}', [NotificationController::class, 'show'])->whereNumber('id');
+    Route::put('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->whereNumber('id');
+    Route::delete('/notifications/{id}', [NotificationController::class, 'destroy'])->whereNumber('id');
+
     Route::get('/services', [ServiceController::class, 'getAll']);
     Route::get('/users', UsersListController::class);
     Route::get('/tasks/today', TasksTodayController::class);

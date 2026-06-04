@@ -9,6 +9,36 @@ use Illuminate\Http\JsonResponse;
 
 class NotificationController extends Controller
 {
+    /**
+     * Mobile feed (same shape as laravel-eurodental mobile web).
+     */
+    public function list(): JsonResponse
+    {
+        $user = auth()->user();
+        $notifications = $user->notifications()
+            ->orderBy('created_at', 'desc')
+            ->limit(20)
+            ->get()
+            ->map(fn (Notification $notification) => [
+                'id' => $notification->id,
+                'title' => $notification->title,
+                'body' => $notification->body,
+                'type' => $notification->type,
+                'data' => $notification->data,
+                'is_read' => $notification->is_read,
+                'is_sent' => $notification->is_sent,
+                'read_at' => $notification->read_at,
+                'created_at' => $notification->created_at,
+                'updated_at' => $notification->updated_at,
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'notifications' => $notifications,
+            'unread_count' => $user->notifications()->unread()->count(),
+        ]);
+    }
+
     public function index(Request $request): JsonResponse
     {
         // Get notifications for the authenticated user only
@@ -66,7 +96,18 @@ class NotificationController extends Controller
             
             return response()->json([
                 'success' => true,
-                'notification' => $notification
+                'notification' => [
+                    'id' => $notification->id,
+                    'title' => $notification->title,
+                    'body' => $notification->body,
+                    'type' => $notification->type,
+                    'data' => $notification->data,
+                    'is_read' => $notification->is_read,
+                    'is_sent' => $notification->is_sent,
+                    'read_at' => $notification->read_at,
+                    'created_at' => $notification->created_at,
+                    'updated_at' => $notification->updated_at,
+                ],
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -91,10 +132,23 @@ class NotificationController extends Controller
             
             $notification->markAsRead();
             
+            $fresh = $notification->fresh();
+
             return response()->json([
                 'success' => true,
                 'message' => 'Notification marked as read',
-                'notification' => $notification->fresh()
+                'notification' => [
+                    'id' => $fresh->id,
+                    'title' => $fresh->title,
+                    'body' => $fresh->body,
+                    'type' => $fresh->type,
+                    'data' => $fresh->data,
+                    'is_read' => $fresh->is_read,
+                    'is_sent' => $fresh->is_sent,
+                    'read_at' => $fresh->read_at,
+                    'created_at' => $fresh->created_at,
+                    'updated_at' => $fresh->updated_at,
+                ],
             ]);
         } catch (\Exception $e) {
             return response()->json([

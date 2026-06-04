@@ -39,7 +39,7 @@ if ($decoded === false || strlen($decoded) !== 32) {
 
 $appUrl = getenv('APP_URL') ?: 'https://mobile.eurodental.ma';
 $assetUrl = getenv('ASSET_URL') ?: 'https://eurodental.ma';
-$cors = getenv('CORS_ALLOWED_ORIGINS') ?: 'http://localhost:4200,http://127.0.0.1:4200,https://localhost,capacitor://localhost';
+$cors = getenv('CORS_ALLOWED_ORIGINS') ?: 'http://localhost:8100,http://127.0.0.1:8100,http://localhost:4200,http://127.0.0.1:4200,https://localhost,capacitor://localhost';
 
 $lines = [
     'APP_NAME="EuroDental Mobile API"',
