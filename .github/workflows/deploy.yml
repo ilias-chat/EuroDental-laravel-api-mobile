@@ -13,7 +13,7 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
 
     steps:
       - name: Checkout
@@ -49,32 +49,49 @@ jobs:
       - name: Normalize shell scripts (LF)
         run: sed -i 's/\r$//' scripts/remote-optimize.sh
 
-      - name: Install sshpass
-        run: sudo apt-get update && sudo apt-get install -y sshpass
-
-      - name: Prepare SSH password file
+      - name: Setup SSH key (ssh-agent)
         env:
-          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
-          printf '%s' "$SSH_PASSWORD" > .sshpass
-          chmod 600 .sshpass
+          if [ -z "$SSH_PRIVATE_KEY" ]; then
+            echo "::error::Missing GitHub secret SSH_PRIVATE_KEY. Add your Hostinger private key (see repo README or hPanel SSH keys)."
+            exit 1
+          fi
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          eval "$(ssh-agent -s)"
+          ssh-add ~/.ssh/deploy_key
+          ssh-keyscan -p "${{ secrets.SSH_PORT }}" -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+          echo "SSH agent ready (key loaded for ssh/scp/rsync)."
+
+      - name: Test SSH connection
+        run: |
+          TARGET="${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}"
+          ssh -p "${{ secrets.SSH_PORT }}" "$TARGET" "echo SSH_OK && uptime && df -h . | head -2"
 
       - name: Rsync application to server
         env:
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
-          SSH_OPTS="-o StrictHostKeyChecking=no -o ConnectTimeout=60 -o ServerAliveInterval=30 -o ServerAliveCountMax=10"
+          SSH_OPTS="-o StrictHostKeyChecking=accept-new -o ConnectTimeout=60 -o ServerAliveInterval=15 -o ServerAliveCountMax=10"
           TARGET="${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}"
-          for attempt in 1 2 3 4 5; do
-            echo "Rsync attempt ${attempt}/5..."
-            sshpass -f .sshpass ssh $SSH_OPTS -p "${{ secrets.SSH_PORT }}" "$TARGET" \
-              "mkdir -p $(printf '%q' "$DEPLOY_PATH")" || true
-            if sshpass -f .sshpass rsync -avz --delete \
+          REMOTE="${TARGET}:${DEPLOY_PATH}/"
+          RSYNC_SSH="ssh ${SSH_OPTS} -p ${{ secrets.SSH_PORT }}"
+
+          ssh -p "${{ secrets.SSH_PORT }}" "$TARGET" "mkdir -p $(printf '%q' "$DEPLOY_PATH")"
+
+          for attempt in 1 2 3; do
+            echo "Rsync attempt ${attempt}/3 → ${REMOTE}"
+            if rsync -avz --delete --info=stats2 \
               --exclude-from=.rsync-exclude \
-              -e "ssh $SSH_OPTS -p ${{ secrets.SSH_PORT }}" \
-              ./ "${TARGET}:${DEPLOY_PATH}/"; then
+              -e "$RSYNC_SSH" \
+              ./ "$REMOTE"; then
+              echo "Rsync finished successfully."
               exit 0
             fi
+            echo "Rsync failed (exit 255 usually means SSH dropped). Retrying in 20s..."
             sleep 20
           done
           exit 1
@@ -85,33 +102,27 @@ jobs:
           PHP_BIN: ${{ secrets.PHP_BIN }}
           PUBLIC_HTML_PATH: ${{ secrets.PUBLIC_HTML_PATH }}
         run: |
-          SSH_OPTS="-o StrictHostKeyChecking=no -o ConnectTimeout=60 -o ServerAliveInterval=30"
           TARGET="${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}"
           REMOTE_CMD="export DEPLOY_PATH=$(printf '%q' "$DEPLOY_PATH"); export PHP_BIN=$(printf '%q' "${PHP_BIN:-}"); export PUBLIC_HTML_PATH=$(printf '%q' "${PUBLIC_HTML_PATH:-}"); sh $(printf '%q' "$DEPLOY_PATH/scripts/remote-optimize.sh")"
           OK=0
           for attempt in 1 2 3; do
-            echo "Optimize attempt ${attempt}/3..."
-            if sshpass -f .sshpass ssh $SSH_OPTS -p "${{ secrets.SSH_PORT }}" "$TARGET" "$REMOTE_CMD"; then
+            echo "Finalize attempt ${attempt}/3..."
+            if ssh -p "${{ secrets.SSH_PORT }}" "$TARGET" "$REMOTE_CMD"; then
               OK=1
               break
             fi
             sleep 10
           done
           echo "========== SERVER DEPLOY DEBUG LOG =========="
-          sshpass -f .sshpass scp $SSH_OPTS -P "${{ secrets.SSH_PORT }}" \
+          scp -P "${{ secrets.SSH_PORT }}" \
             "${TARGET}:${DEPLOY_PATH}/deploy-debug.txt" ./deploy-debug.txt 2>/dev/null || true
           if [ -f deploy-debug.txt ]; then cat deploy-debug.txt; else echo "(no deploy-debug.txt)"; fi
           echo "========== LARAVEL LOG (tail) =========="
-          LOG_REMOTE="${DEPLOY_PATH}/storage/logs/laravel.log"
-          sshpass -f .sshpass ssh $SSH_OPTS -p "${{ secrets.SSH_PORT }}" "$TARGET" \
-            "tail -n 80 $(printf '%q' "$LOG_REMOTE") 2>/dev/null || echo '(no laravel.log yet)'" || true
+          ssh -p "${{ secrets.SSH_PORT }}" "$TARGET" \
+            "tail -n 80 $(printf '%q' "$DEPLOY_PATH/storage/logs/laravel.log") 2>/dev/null || echo '(no laravel.log yet)'" || true
           echo "=============================================="
           if [ "$OK" = "1" ]; then exit 0; fi
           exit 1
-
-      - name: Remove SSH password file
-        if: always()
-        run: rm -f .sshpass
 
       - name: Verify health endpoint
         continue-on-error: true
@@ -130,5 +141,5 @@ jobs:
             fi
             sleep 10
           done
-          echo "Health check failed — see Finalize step logs (DB secrets or PHP version)"
+          echo "Health check failed — see Finalize step logs"
           exit 1
