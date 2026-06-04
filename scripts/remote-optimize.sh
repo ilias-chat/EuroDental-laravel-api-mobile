@@ -63,6 +63,28 @@ EOF
 chmod 644 "$INDEX_FILE"
 log "Wrote $INDEX_FILE"
 
+CHECK_FILE="$PUBLIC_HTML/check.php"
+cat > "$CHECK_FILE" <<'PHP'
+<?php
+header('Content-Type: text/plain; charset=utf-8');
+$root = __DIR__ . '/../APP_FOLDER_PLACEHOLDER';
+echo 'PHP ' . PHP_VERSION . "\n";
+echo "root=$root\n";
+if (!is_dir($root)) { echo "ERROR: app dir missing\n"; exit(1); }
+try {
+    require $root . '/vendor/autoload.php';
+    $app = require $root . '/bootstrap/app.php';
+    $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+    Illuminate\Support\Facades\DB::connection()->getPdo();
+    echo "DB: OK\nLaravel: " . $app->version() . "\n";
+} catch (Throwable $e) {
+    echo 'ERROR: ' . $e->getMessage() . "\n";
+}
+PHP
+sed -i "s/APP_FOLDER_PLACEHOLDER/${APP_FOLDER}/g" "$CHECK_FILE"
+chmod 644 "$CHECK_FILE"
+log "Wrote $CHECK_FILE (visit /check.php for deploy errors)"
+
 {
   if [ -f "$DEPLOY_PATH/scripts/hostinger-public_html.htaccess" ]; then
     cat "$DEPLOY_PATH/scripts/hostinger-public_html.htaccess"

@@ -116,6 +116,9 @@ jobs:
       - name: Verify health endpoint
         continue-on-error: true
         run: |
+          echo "=== deploy check.php ==="
+          curl -sS --max-time 25 "https://mobile.eurodental.ma/check.php" || true
+          echo ""
           for i in 1 2 3 4 5; do
             code=$(curl -sS -o /tmp/up-body.txt -w "%{http_code}" --max-time 25 "https://mobile.eurodental.ma/up" || echo "000")
             echo "HTTP $code"

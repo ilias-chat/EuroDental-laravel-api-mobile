@@ -1,4 +1,1 @@
-# Hostinger: Laravel 12 requires PHP 8.2+
-<IfModule mime_module>
-  AddHandler application/x-httpd-ea-php82___lsphp .php .php8 .phtml
-</IfModule>
+# Use hPanel → PHP Configuration → 8.2 for mobile.eurodental.ma (do not rely on AddHandler here; wrong handler causes HTTP 500).
