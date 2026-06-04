@@ -26,8 +26,9 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
-          extensions: dom, xml, mbstring, ctype, fileinfo, openssl, pdo_mysql, tokenizer, bcmath, curl
+          extensions: dom, xml, mbstring, ctype, fileinfo, openssl, pdo_mysql, tokenizer, bcmath, curl, json
           coverage: none
+          tools: composer:v2
 
       - name: Build production .env
         env:
@@ -40,44 +41,13 @@ jobs:
           DB_USERNAME: ${{ secrets.DB_USERNAME }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           CORS_ALLOWED_ORIGINS: ${{ secrets.CORS_ALLOWED_ORIGINS }}
-        run: |
-          if [ -z "$APP_KEY" ]; then
-            echo "APP_KEY secret is missing."
-            exit 1
-          fi
-          APP_URL="${APP_URL:-https://mobile.eurodental.ma}"
-          ASSET_URL="${ASSET_URL:-https://eurodental.ma}"
-          {
-            echo 'APP_NAME="EuroDental Mobile API"'
-            echo 'APP_ENV=production'
-            echo "APP_KEY=${APP_KEY}"
-            echo 'APP_DEBUG=false'
-            echo "APP_URL=${APP_URL}"
-            echo ''
-            echo 'LOG_CHANNEL=stack'
-            echo 'LOG_LEVEL=error'
-            echo ''
-            echo 'DB_CONNECTION=mysql'
-            echo "DB_HOST=${DB_HOST}"
-            echo "DB_PORT=${DB_PORT}"
-            echo "DB_DATABASE=${DB_DATABASE}"
-            echo "DB_USERNAME=${DB_USERNAME}"
-            echo "DB_PASSWORD=${DB_PASSWORD}"
-            echo ''
-            echo 'SESSION_DRIVER=file'
-            echo 'SESSION_LIFETIME=120'
-            echo 'CACHE_STORE=file'
-            echo 'QUEUE_CONNECTION=sync'
-            echo 'FILESYSTEM_DISK=local'
-            echo ''
-            echo "ASSET_URL=${ASSET_URL}"
-            echo "CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}"
-          } > .env
+        run: php scripts/build-deploy-env.php
 
-      - name: Install Composer dependencies
-        run: |
-          composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --no-scripts
-          php artisan package:discover --ansi
+      - name: Composer install
+        run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --no-scripts
+
+      - name: Discover packages
+        run: php artisan package:discover --ansi
 
       - name: Install sshpass
         run: sudo apt-get update && sudo apt-get install -y sshpass
