@@ -6,6 +6,8 @@ set -euxo pipefail
 
 cd "$DEPLOY_PATH"
 
+rm -f bootstrap/cache/config.php bootstrap/cache/routes*.php bootstrap/cache/events.php
+
 if [ ! -f artisan ]; then
   echo "artisan not found in $DEPLOY_PATH" >&2
   exit 1
