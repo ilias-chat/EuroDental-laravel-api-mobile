@@ -67,22 +67,15 @@ jobs:
             ./ "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/"
 
       - name: Optimize Laravel on server
+        env:
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          PHP_BIN: ${{ secrets.PHP_BIN }}
         run: |
-          PHP_BIN="${{ secrets.PHP_BIN }}"
-          if [ -z "$PHP_BIN" ]; then PHP_BIN="/usr/bin/php"; fi
+          export PHP_BIN="${PHP_BIN:-/usr/bin/php}"
           sshpass -f .sshpass ssh -o StrictHostKeyChecking=no -p "${{ secrets.SSH_PORT }}" \
             "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
-            "set -e
-            cd '${{ secrets.DEPLOY_PATH }}'
-            chmod 600 .env
-            mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache
-            chmod -R ug+rwx storage bootstrap/cache
-            $PHP_BIN artisan package:discover --ansi
-            $PHP_BIN artisan config:clear
-            $PHP_BIN artisan config:cache
-            $PHP_BIN artisan route:cache
-            $PHP_BIN artisan view:cache
-            echo Deploy finished."
+            "export DEPLOY_PATH=$(printf '%q' "$DEPLOY_PATH") PHP_BIN=$(printf '%q' "$PHP_BIN"); bash -s" \
+            < scripts/remote-optimize.sh
 
       - name: Remove SSH password file
         if: always()
