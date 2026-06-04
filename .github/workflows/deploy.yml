@@ -66,27 +66,24 @@ jobs:
             -e "ssh -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT }}" \
             ./ "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/"
 
-      - name: Remove SSH password file
-        if: always()
-        run: rm -f .sshpass
-
       - name: Optimize Laravel on server
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          password: ${{ secrets.SSH_PASSWORD }}
-          port: ${{ secrets.SSH_PORT }}
-          script: |
-            set -e
-            cd "${{ secrets.DEPLOY_PATH }}"
+        run: |
+          PHP_BIN="${{ secrets.PHP_BIN }}"
+          if [ -z "$PHP_BIN" ]; then PHP_BIN="/usr/bin/php"; fi
+          sshpass -f .sshpass ssh -o StrictHostKeyChecking=no -p "${{ secrets.SSH_PORT }}" \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            "set -e
+            cd '${{ secrets.DEPLOY_PATH }}'
             chmod 600 .env
-            mkdir -p storage/framework/{cache,sessions,views} storage/logs bootstrap/cache
+            mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache
             chmod -R ug+rwx storage bootstrap/cache
-            PHP_BIN="${{ secrets.PHP_BIN }}"
-            if [ -z "$PHP_BIN" ]; then PHP_BIN="/usr/bin/php"; fi
+            $PHP_BIN artisan package:discover --ansi
             $PHP_BIN artisan config:clear
             $PHP_BIN artisan config:cache
             $PHP_BIN artisan route:cache
             $PHP_BIN artisan view:cache
-            echo "Deploy finished."
+            echo Deploy finished."
+
+      - name: Remove SSH password file
+        if: always()
+        run: rm -f .sshpass
