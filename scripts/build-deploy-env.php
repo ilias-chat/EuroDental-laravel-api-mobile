@@ -3,6 +3,17 @@
 /**
  * Write .env for CI deploy from environment variables (safe for special chars in passwords).
  */
+function envLine(string $key, string $value): string
+{
+    if ($value === '' || preg_match('/\s#"\';\\\\]/', $value)) {
+        $escaped = str_replace(['\\', '"'], ['\\\\', '\\"'], $value);
+
+        return $key . '="' . $escaped . '"';
+    }
+
+    return $key . '=' . $value;
+}
+
 $required = ['APP_KEY', 'DB_HOST', 'DB_PORT', 'DB_DATABASE', 'DB_USERNAME', 'DB_PASSWORD'];
 
 foreach ($required as $name) {
@@ -13,26 +24,32 @@ foreach ($required as $name) {
     }
 }
 
+$appKey = getenv('APP_KEY');
+if (! str_starts_with($appKey, 'base64:')) {
+    fwrite(STDERR, "APP_KEY must start with base64:\n");
+    exit(1);
+}
+
 $appUrl = getenv('APP_URL') ?: 'https://mobile.eurodental.ma';
 $assetUrl = getenv('ASSET_URL') ?: 'https://eurodental.ma';
-$cors = getenv('CORS_ALLOWED_ORIGINS') ?: 'http://localhost:4200,http://127.0.0.1:4200';
+$cors = getenv('CORS_ALLOWED_ORIGINS') ?: 'http://localhost:4200,http://127.0.0.1:4200,https://localhost,capacitor://localhost';
 
 $lines = [
     'APP_NAME="EuroDental Mobile API"',
     'APP_ENV=production',
-    'APP_KEY=' . getenv('APP_KEY'),
+    envLine('APP_KEY', $appKey),
     'APP_DEBUG=false',
-    'APP_URL=' . $appUrl,
+    envLine('APP_URL', $appUrl),
     '',
     'LOG_CHANNEL=stack',
     'LOG_LEVEL=error',
     '',
     'DB_CONNECTION=mysql',
-    'DB_HOST=' . getenv('DB_HOST'),
-    'DB_PORT=' . getenv('DB_PORT'),
-    'DB_DATABASE=' . getenv('DB_DATABASE'),
-    'DB_USERNAME=' . getenv('DB_USERNAME'),
-    'DB_PASSWORD=' . getenv('DB_PASSWORD'),
+    envLine('DB_HOST', getenv('DB_HOST')),
+    envLine('DB_PORT', getenv('DB_PORT')),
+    envLine('DB_DATABASE', getenv('DB_DATABASE')),
+    envLine('DB_USERNAME', getenv('DB_USERNAME')),
+    envLine('DB_PASSWORD', getenv('DB_PASSWORD')),
     '',
     'SESSION_DRIVER=file',
     'SESSION_LIFETIME=120',
@@ -40,8 +57,8 @@ $lines = [
     'QUEUE_CONNECTION=sync',
     'FILESYSTEM_DISK=local',
     '',
-    'ASSET_URL=' . $assetUrl,
-    'CORS_ALLOWED_ORIGINS=' . $cors,
+    envLine('ASSET_URL', $assetUrl),
+    envLine('CORS_ALLOWED_ORIGINS', $cors),
     '',
 ];
 

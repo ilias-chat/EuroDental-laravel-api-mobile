@@ -47,7 +47,9 @@ jobs:
         run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --no-scripts
 
       - name: Discover packages
-        run: php artisan package:discover --ansi
+        run: |
+          php artisan --version
+          php artisan package:discover --ansi -v
 
       - name: Install sshpass
         run: sudo apt-get update && sudo apt-get install -y sshpass
