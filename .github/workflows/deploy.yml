@@ -40,8 +40,8 @@ jobs:
           CORS_ALLOWED_ORIGINS: ${{ secrets.CORS_ALLOWED_ORIGINS }}
         run: php scripts/build-deploy-env.php
 
-      - name: Composer install
-        run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --no-scripts
+      - name: Validate Composer lock
+        run: composer validate --no-check-publish --no-interaction
 
       - name: Remove local Laravel caches before rsync
         run: rm -f bootstrap/cache/config.php bootstrap/cache/routes*.php bootstrap/cache/events.php
@@ -69,7 +69,7 @@ jobs:
             echo "Rsync attempt ${attempt}/5..."
             sshpass -f .sshpass ssh $SSH_OPTS -p "${{ secrets.SSH_PORT }}" "$TARGET" \
               "mkdir -p $(printf '%q' "$DEPLOY_PATH")" || true
-            if sshpass -f .sshpass rsync -avz --delete \
+            if sshpass -f .sshpass rsync -avz --delete --info=stats2 \
               --exclude-from=.rsync-exclude \
               -e "ssh $SSH_OPTS -p ${{ secrets.SSH_PORT }}" \
               ./ "${TARGET}:${DEPLOY_PATH}/"; then
