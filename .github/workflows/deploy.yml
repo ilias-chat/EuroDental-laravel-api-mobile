@@ -49,11 +49,6 @@ jobs:
       - name: Install sshpass
         run: sudo apt-get update && sudo apt-get install -y sshpass
 
-      - name: Add host to known_hosts
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -p "${{ secrets.SSH_PORT }}" -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
-
       - name: Ensure deploy directory exists
         run: |
           sshpass -e ssh -o StrictHostKeyChecking=no -p "${{ secrets.SSH_PORT }}" \
