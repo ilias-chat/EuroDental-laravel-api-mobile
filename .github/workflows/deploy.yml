@@ -65,8 +65,8 @@ jobs:
         run: |
           SSH_OPTS="-o StrictHostKeyChecking=no -o ConnectTimeout=60 -o ServerAliveInterval=30 -o ServerAliveCountMax=10"
           TARGET="${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}"
-          for attempt in 1 2 3 4 5 6 7 8; do
-            echo "Rsync attempt ${attempt}/8..."
+          for attempt in 1 2 3 4 5; do
+            echo "Rsync attempt ${attempt}/5..."
             sshpass -f .sshpass ssh $SSH_OPTS -p "${{ secrets.SSH_PORT }}" "$TARGET" \
               "mkdir -p $(printf '%q' "$DEPLOY_PATH")" || true
             if sshpass -f .sshpass rsync -avz --delete \
@@ -79,14 +79,15 @@ jobs:
           done
           exit 1
 
-      - name: Optimize Laravel on server
+      - name: Finalize deploy on server
         env:
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
           PHP_BIN: ${{ secrets.PHP_BIN }}
+          PUBLIC_HTML_PATH: ${{ secrets.PUBLIC_HTML_PATH }}
         run: |
           SSH_OPTS="-o StrictHostKeyChecking=no -o ConnectTimeout=60 -o ServerAliveInterval=30"
           TARGET="${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}"
-          REMOTE_CMD="export DEPLOY_PATH=$(printf '%q' "$DEPLOY_PATH"); export PHP_BIN=$(printf '%q' "${PHP_BIN:-}"); sh $(printf '%q' "$DEPLOY_PATH/scripts/remote-optimize.sh")"
+          REMOTE_CMD="export DEPLOY_PATH=$(printf '%q' "$DEPLOY_PATH"); export PHP_BIN=$(printf '%q' "${PHP_BIN:-}"); export PUBLIC_HTML_PATH=$(printf '%q' "${PUBLIC_HTML_PATH:-}"); sh $(printf '%q' "$DEPLOY_PATH/scripts/remote-optimize.sh")"
           OK=0
           for attempt in 1 2 3; do
             echo "Optimize attempt ${attempt}/3..."
@@ -109,6 +110,13 @@ jobs:
         run: rm -f .sshpass
 
       - name: Verify health endpoint
-        continue-on-error: true
         run: |
-          curl -fS --max-time 20 "https://mobile.eurodental.ma/up" || echo "Note: set hPanel document root to laravel-mobile/public if /up fails"
+          for i in 1 2 3 4 5; do
+            if curl -fS --max-time 25 "https://mobile.eurodental.ma/up"; then
+              echo "Health check OK"
+              exit 0
+            fi
+            echo "Attempt $i failed, retrying..."
+            sleep 10
+          done
+          exit 1

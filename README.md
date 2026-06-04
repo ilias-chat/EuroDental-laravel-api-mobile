@@ -40,7 +40,7 @@ Workflow : `.github/workflows/deploy.yml` (push sur `main` ou **Run workflow** m
 ### hPanel (une fois)
 
 1. Créer le dossier de déploiement (ou laisser le workflow le créer).
-2. **Document root** du site `mobile.eurodental.ma` → `.../laravel-mobile/public` (pas seulement `public_html`).
+2. **Structure Hostinger** : l’app est dans `laravel-mobile/` à côté de `public_html/`. Le déploiement écrit automatiquement `public_html/index.php` qui pointe vers Laravel (pas besoin de changer le document root si `public_html` est déjà la racine du site).
 
 ### Après deploy
 
