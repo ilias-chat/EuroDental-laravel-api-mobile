@@ -15,9 +15,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
-    env:
-      SSHPASS: ${{ secrets.SSH_PASSWORD }}
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -49,18 +46,29 @@ jobs:
       - name: Install sshpass
         run: sudo apt-get update && sudo apt-get install -y sshpass
 
+      - name: Prepare SSH password file
+        env:
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+        run: |
+          printf '%s' "$SSH_PASSWORD" > .sshpass
+          chmod 600 .sshpass
+
       - name: Ensure deploy directory exists
         run: |
-          sshpass -e ssh -o StrictHostKeyChecking=no -p "${{ secrets.SSH_PORT }}" \
+          sshpass -f .sshpass ssh -o StrictHostKeyChecking=no -p "${{ secrets.SSH_PORT }}" \
             "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
             "mkdir -p '${{ secrets.DEPLOY_PATH }}'"
 
       - name: Rsync application to server
         run: |
-          sshpass -e rsync -avz --delete \
+          sshpass -f .sshpass rsync -avz --delete \
             --exclude-from=.rsync-exclude \
             -e "ssh -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT }}" \
             ./ "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/"
+
+      - name: Remove SSH password file
+        if: always()
+        run: rm -f .sshpass
 
       - name: Optimize Laravel on server
         uses: appleboy/ssh-action@v1.2.0
