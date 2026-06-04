@@ -30,7 +30,15 @@ jobs:
           coverage: none
 
       - name: Install Composer dependencies
-        run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+        env:
+          # package:discover runs during composer scripts; needs a key before .env is built
+          APP_KEY: ${{ secrets.APP_KEY }}
+        run: |
+          if [ -z "$APP_KEY" ]; then
+            echo "APP_KEY secret is required for composer install (package:discover)."
+            exit 1
+          fi
+          composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
 
       - name: Build production .env
         env:
