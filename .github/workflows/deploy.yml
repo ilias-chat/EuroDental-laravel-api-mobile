@@ -15,6 +15,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
+    env:
+      SSHPASS: ${{ secrets.SSH_PASSWORD }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -70,10 +73,8 @@ jobs:
             echo "CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}"
           } > .env
 
-      - name: Setup SSH agent
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      - name: Install sshpass
+        run: sudo apt-get update && sudo apt-get install -y sshpass
 
       - name: Add host to known_hosts
         run: |
@@ -82,14 +83,15 @@ jobs:
 
       - name: Ensure deploy directory exists
         run: |
-          ssh -p "${{ secrets.SSH_PORT }}" "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+          sshpass -e ssh -o StrictHostKeyChecking=no -p "${{ secrets.SSH_PORT }}" \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
             "mkdir -p '${{ secrets.DEPLOY_PATH }}'"
 
       - name: Rsync application to server
         run: |
-          rsync -avz --delete \
+          sshpass -e rsync -avz --delete \
             --exclude-from=.rsync-exclude \
-            -e "ssh -p ${{ secrets.SSH_PORT }}" \
+            -e "ssh -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT }}" \
             ./ "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/"
 
       - name: Optimize Laravel on server
@@ -97,7 +99,6 @@ jobs:
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
           password: ${{ secrets.SSH_PASSWORD }}
           port: ${{ secrets.SSH_PORT }}
           script: |

@@ -27,7 +27,7 @@ Workflow : `.github/workflows/deploy.yml` (push sur `main` ou **Run workflow** m
 | `SSH_HOST` | IP ou hostname Hostinger |
 | `SSH_PORT` | ex. `65002` |
 | `SSH_USER` | ex. `u629839892` |
-| `SSH_PRIVATE_KEY` | Clé privée deploy (recommandé pour rsync) |
+| `SSH_PASSWORD` | Mot de passe SSH Hostinger |
 | `DEPLOY_PATH` | `/home/u629839892/domains/mobile.eurodental.ma/laravel-mobile` |
 | `PHP_BIN` | `/usr/bin/php` |
 | `APP_KEY` | `base64:...` (`php artisan key:generate --show`) |
@@ -35,7 +35,7 @@ Workflow : `.github/workflows/deploy.yml` (push sur `main` ou **Run workflow** m
 | `CORS_ALLOWED_ORIGINS` | Origines de l’app Ionic |
 | `APP_URL` | optionnel — défaut `https://mobile.eurodental.ma` |
 | `ASSET_URL` | optionnel — défaut `https://eurodental.ma` |
-| `SSH_PASSWORD` | optionnel — secours pour la dernière étape SSH si pas de clé |
+| `SSH_PRIVATE_KEY` | optionnel — non requis si `SSH_PASSWORD` est défini |
 
 ### hPanel (une fois)
 
