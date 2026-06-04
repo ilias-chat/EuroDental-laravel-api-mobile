@@ -55,9 +55,16 @@ jobs:
 
       - name: Ensure deploy directory exists
         run: |
-          sshpass -f .sshpass ssh -o StrictHostKeyChecking=no -p "${{ secrets.SSH_PORT }}" \
-            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
-            "mkdir -p '${{ secrets.DEPLOY_PATH }}'"
+          for attempt in 1 2 3; do
+            if sshpass -f .sshpass ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 -p "${{ secrets.SSH_PORT }}" \
+              "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+              "mkdir -p '${{ secrets.DEPLOY_PATH }}'"; then
+              exit 0
+            fi
+            echo "SSH mkdir attempt ${attempt} failed, retrying in 10s..."
+            sleep 10
+          done
+          exit 1
 
       - name: Rsync application to server
         run: |
@@ -73,9 +80,17 @@ jobs:
         run: |
           export PHP_BIN="${PHP_BIN:-/usr/bin/php}"
           REMOTE_SCRIPT="$(printf '%q' "$DEPLOY_PATH/scripts/remote-optimize.sh")"
-          sshpass -f .sshpass ssh -o StrictHostKeyChecking=no -p "${{ secrets.SSH_PORT }}" \
-            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
-            "export DEPLOY_PATH=$(printf '%q' "$DEPLOY_PATH") PHP_BIN=$(printf '%q' "$PHP_BIN"); bash ${REMOTE_SCRIPT}"
+          REMOTE_CMD="export DEPLOY_PATH=$(printf '%q' "$DEPLOY_PATH") PHP_BIN=$(printf '%q' "$PHP_BIN"); bash ${REMOTE_SCRIPT}"
+          for attempt in 1 2 3; do
+            if sshpass -f .sshpass ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 -p "${{ secrets.SSH_PORT }}" \
+              "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+              "$REMOTE_CMD"; then
+              exit 0
+            fi
+            echo "SSH optimize attempt ${attempt} failed, retrying in 10s..."
+            sleep 10
+          done
+          exit 1
 
       - name: Remove SSH password file
         if: always()
