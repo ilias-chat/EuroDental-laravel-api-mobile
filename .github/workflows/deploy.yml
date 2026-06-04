@@ -49,38 +49,41 @@ jobs:
       - name: Normalize shell scripts (LF)
         run: sed -i 's/\r$//' scripts/remote-optimize.sh
 
-      - name: Setup SSH key (ssh-agent)
+      - name: Setup SSH key
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
           if [ -z "$SSH_PRIVATE_KEY" ]; then
-            echo "::error::Missing GitHub secret SSH_PRIVATE_KEY. Add your Hostinger private key (see repo README or hPanel SSH keys)."
+            echo "::error::Missing GitHub secret SSH_PRIVATE_KEY."
             exit 1
           fi
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
           printf '%s\n' "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          eval "$(ssh-agent -s)"
-          ssh-add ~/.ssh/deploy_key
           ssh-keyscan -p "${{ secrets.SSH_PORT }}" -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
-          echo "SSH agent ready (key loaded for ssh/scp/rsync)."
+          {
+            echo "SSH_KEY_FILE=$HOME/.ssh/deploy_key"
+            echo "SSH_COMMON_OPTS=-o StrictHostKeyChecking=accept-new -o ConnectTimeout=60 -o ServerAliveInterval=15 -o ServerAliveCountMax=10"
+          } >> "$GITHUB_ENV"
 
       - name: Test SSH connection
         run: |
           TARGET="${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}"
-          ssh -p "${{ secrets.SSH_PORT }}" "$TARGET" "echo SSH_OK && uptime && df -h . | head -2"
+          echo "SSH test → ${TARGET} port ${{ secrets.SSH_PORT }} (use IP 147.93.93.124 if hostname times out)"
+          ssh -i "$SSH_KEY_FILE" $SSH_COMMON_OPTS -p "${{ secrets.SSH_PORT }}" "$TARGET" \
+            "echo SSH_OK && uptime && df -h . | head -2"
 
       - name: Rsync application to server
         env:
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
-          SSH_OPTS="-o StrictHostKeyChecking=accept-new -o ConnectTimeout=60 -o ServerAliveInterval=15 -o ServerAliveCountMax=10"
           TARGET="${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}"
           REMOTE="${TARGET}:${DEPLOY_PATH}/"
-          RSYNC_SSH="ssh ${SSH_OPTS} -p ${{ secrets.SSH_PORT }}"
+          RSYNC_SSH="ssh -i $SSH_KEY_FILE $SSH_COMMON_OPTS -p ${{ secrets.SSH_PORT }}"
 
-          ssh -p "${{ secrets.SSH_PORT }}" "$TARGET" "mkdir -p $(printf '%q' "$DEPLOY_PATH")"
+          ssh -i "$SSH_KEY_FILE" $SSH_COMMON_OPTS -p "${{ secrets.SSH_PORT }}" "$TARGET" \
+            "mkdir -p $(printf '%q' "$DEPLOY_PATH")"
 
           for attempt in 1 2 3; do
             echo "Rsync attempt ${attempt}/3 → ${REMOTE}"
@@ -91,7 +94,7 @@ jobs:
               echo "Rsync finished successfully."
               exit 0
             fi
-            echo "Rsync failed (exit 255 usually means SSH dropped). Retrying in 20s..."
+            echo "Rsync failed. Retrying in 20s..."
             sleep 20
           done
           exit 1
@@ -107,18 +110,18 @@ jobs:
           OK=0
           for attempt in 1 2 3; do
             echo "Finalize attempt ${attempt}/3..."
-            if ssh -p "${{ secrets.SSH_PORT }}" "$TARGET" "$REMOTE_CMD"; then
+            if ssh -i "$SSH_KEY_FILE" $SSH_COMMON_OPTS -p "${{ secrets.SSH_PORT }}" "$TARGET" "$REMOTE_CMD"; then
               OK=1
               break
             fi
             sleep 10
           done
           echo "========== SERVER DEPLOY DEBUG LOG =========="
-          scp -P "${{ secrets.SSH_PORT }}" \
+          scp -i "$SSH_KEY_FILE" $SSH_COMMON_OPTS -P "${{ secrets.SSH_PORT }}" \
             "${TARGET}:${DEPLOY_PATH}/deploy-debug.txt" ./deploy-debug.txt 2>/dev/null || true
           if [ -f deploy-debug.txt ]; then cat deploy-debug.txt; else echo "(no deploy-debug.txt)"; fi
           echo "========== LARAVEL LOG (tail) =========="
-          ssh -p "${{ secrets.SSH_PORT }}" "$TARGET" \
+          ssh -i "$SSH_KEY_FILE" $SSH_COMMON_OPTS -p "${{ secrets.SSH_PORT }}" "$TARGET" \
             "tail -n 80 $(printf '%q' "$DEPLOY_PATH/storage/logs/laravel.log") 2>/dev/null || echo '(no laravel.log yet)'" || true
           echo "=============================================="
           if [ "$OK" = "1" ]; then exit 0; fi
