@@ -95,17 +95,16 @@ jobs:
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
           PHP_BIN: ${{ secrets.PHP_BIN }}
         run: |
-          export PHP_BIN="${PHP_BIN:-/usr/bin/php}"
           SSH_OPTS="-o StrictHostKeyChecking=no -o ConnectTimeout=60 -o ServerAliveInterval=30"
-          REMOTE_CMD="export DEPLOY_PATH=$(printf '%q' "$DEPLOY_PATH") PHP_BIN=$(printf '%q' "$PHP_BIN"); sh $(printf '%q' "$DEPLOY_PATH/scripts/remote-optimize.sh")"
-          for attempt in 1 2 3 4 5; do
-            echo "Optimize attempt ${attempt}/5..."
+          REMOTE_CMD="export DEPLOY_PATH=$(printf '%q' "$DEPLOY_PATH"); export PHP_BIN=$(printf '%q' "${PHP_BIN:-}"); sh $(printf '%q' "$DEPLOY_PATH/scripts/remote-optimize.sh")"
+          for attempt in 1 2 3; do
+            echo "Optimize attempt ${attempt}/3..."
             if sshpass -f .sshpass ssh $SSH_OPTS -p "${{ secrets.SSH_PORT }}" \
               "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
               "$REMOTE_CMD"; then
               exit 0
             fi
-            sleep 15
+            sleep 10
           done
           exit 1
 
