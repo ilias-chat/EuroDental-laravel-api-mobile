@@ -14,7 +14,7 @@ class PushTokenController extends Controller
     {
         $request->validate([
             'token' => 'required|string|min:10',
-            'platform' => 'string|in:expo,ios,android'
+            'platform' => 'string|in:expo,ios,android,fcm'
         ]);
 
         try {

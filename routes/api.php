@@ -1,12 +1,18 @@
 <?php
 
 use App\Http\Controllers\API\AuthController;
+use App\Http\Controllers\API\ClientController;
+use App\Http\Controllers\API\DeploymentController;
+use App\Http\Controllers\API\DeploymentEventController;
 use App\Http\Controllers\API\NotificationController;
+use App\Http\Controllers\API\PushTokenController;
+use App\Http\Controllers\API\WebPushController;
 use App\Http\Controllers\API\LeaveRequestController;
 use App\Http\Controllers\API\ProposedTaskController;
 use App\Http\Controllers\API\ProductController;
 use App\Http\Controllers\API\ServiceController;
 use App\Http\Controllers\API\TaskController;
+use App\Http\Controllers\API\TaskTypeController;
 use App\Http\Controllers\API\TasksPastController;
 use App\Http\Controllers\API\UsersListController;
 use App\Http\Controllers\API\TasksRangeController;
@@ -29,8 +35,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->whereNumber('id');
     Route::delete('/notifications/{id}', [NotificationController::class, 'destroy'])->whereNumber('id');
 
+    Route::post('/push-token', [PushTokenController::class, 'store']);
+    Route::delete('/push-token', [PushTokenController::class, 'destroy']);
+    Route::post('/webpush/subscribe', [WebPushController::class, 'subscribe']);
+    Route::post('/webpush/unsubscribe', [WebPushController::class, 'unsubscribe']);
+
     Route::get('/services', [ServiceController::class, 'getAll']);
     Route::get('/users', UsersListController::class);
+    Route::get('/task-types', [TaskTypeController::class, 'index']);
+    Route::get('/clients/search', [ClientController::class, 'search']);
     Route::get('/tasks/today', TasksTodayController::class);
     Route::get('/tasks/range', TasksRangeController::class);
     Route::get('/tasks/past', TasksPastController::class);
@@ -45,6 +58,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/proposed-tasks/{id}', [ProposedTaskController::class, 'update'])->whereNumber('id');
     Route::delete('/proposed-tasks/{id}', [ProposedTaskController::class, 'destroy'])->whereNumber('id');
     Route::get('/tasks/{id}', [TaskController::class, 'show'])->whereNumber('id');
+    Route::post('/tasks', [MobileTaskController::class, 'store']);
     Route::get('/tasks/{task}/events', [MobileTaskController::class, 'getTaskEvents'])->whereNumber('task');
     Route::get('/tasks/{task}/user-last-event', [MobileTaskController::class, 'getUserLastEventForTask'])->whereNumber('task');
     Route::post('/tasks/{id}/update-description', [TaskController::class, 'updateDescription'])->whereNumber('id');
@@ -61,4 +75,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/tasks/{task}/admin-delivery-payment', [MobileTaskController::class, 'storeAdminDeliveryPayment'])->whereNumber('task');
     Route::post('/tasks/{task}/services', [MobileTaskController::class, 'updateServices'])->whereNumber('task');
     Route::post('/tasks/{task}/propose-service', [ServicePropositionController::class, 'store'])->whereNumber('task');
+
+    Route::get('/deployments/day', [DeploymentController::class, 'dayDeployments']);
+    Route::get('/deployments/month', [DeploymentController::class, 'monthDeployments']);
+    Route::get('/deployments/{id}', [DeploymentController::class, 'show'])->whereNumber('id');
+    Route::post('/deployments/{id}/expenses', [DeploymentController::class, 'storeExpense'])->whereNumber('id');
+    Route::put('/deployments/{id}/expenses/{expenseId}', [DeploymentController::class, 'updateExpense'])->whereNumber(['id', 'expenseId']);
+    Route::delete('/deployments/{id}/expenses/{expenseId}', [DeploymentController::class, 'deleteExpense'])->whereNumber(['id', 'expenseId']);
+    Route::get('/deployments/{deployment}/events', [DeploymentEventController::class, 'index'])->whereNumber('deployment');
+    Route::post('/deployments/{deployment}/events', [DeploymentEventController::class, 'store'])->whereNumber('deployment');
 });

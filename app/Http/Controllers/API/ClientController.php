@@ -44,6 +44,43 @@ class ClientController extends Controller
         ]);
     }
 
+    public function search(Request $request)
+    {
+        $q = $request->get('q');
+
+        $clients = Client::with(['city', 'image'])
+            ->when($q, function ($query) use ($q) {
+                $terms = preg_split('/\s+/', trim($q));
+                foreach ($terms as $term) {
+                    if ($term === '') {
+                        continue;
+                    }
+                    $query->where(function ($sub) use ($term) {
+                        $sub->where('first_name', 'LIKE', "%{$term}%")
+                            ->orWhere('last_name', 'LIKE', "%{$term}%");
+                    });
+                }
+            })
+            ->orderBy('first_name')
+            ->limit(50)
+            ->get();
+
+        $data = $clients->map(function ($client) {
+            return [
+                'id' => $client->id,
+                'first_name' => $client->first_name,
+                'last_name' => $client->last_name,
+                'name' => $client->first_name.' '.$client->last_name,
+                'city' => optional($client->city)->name,
+                'image' => ($client->image && $client->image->image_name)
+                    ? asset('storage/'.$client->image->image_name)
+                    : null,
+            ];
+        });
+
+        return response()->json(['clients' => $data]);
+    }
+
     /**
      * Get a specific client by ID
      * Example: GET /api/clients/123

@@ -28,27 +28,34 @@ class NotificationService
             // Store notification in database first
             $notification = $this->storeNotification($userId, $title, $body, $data);
 
-            $tokens = $user->pushTokens()
-                ->where('is_active', true)
-                ->pluck('expo_push_token')
-                ->toArray();
-
-            $sentExpo = false;
-            if (!empty($tokens)) {
-                $sentExpo = $this->sendToMultipleUsers($tokens, $title, $body, $data);
-            } else {
-                Log::info("No active Expo tokens; will try Web Push", ['user_id' => $userId]);
+            $expoTokens = [];
+            $fcmTokens = [];
+            foreach ($user->pushTokens()->where('is_active', true)->get() as $pushToken) {
+                $token = $pushToken->expo_push_token;
+                if (str_starts_with($token, 'ExponentPushToken[')) {
+                    $expoTokens[] = $token;
+                } else {
+                    $fcmTokens[] = $token;
+                }
             }
 
-            // Also send via Web Push to browser subscriptions
+            $sentExpo = false;
+            if ($expoTokens !== []) {
+                $sentExpo = $this->sendToMultipleUsers($expoTokens, $title, $body, $data);
+            }
+
+            $sentFcm = false;
+            if ($fcmTokens !== []) {
+                $sentFcm = app(FcmPushService::class)->sendToTokens($fcmTokens, $title, $body, $data);
+            }
+
             $sentWeb = $this->sendWebPushToUser($userId, $title, $body, $data);
-            
-            // Update notification as sent if successful
-            if (($sentExpo || $sentWeb) && $notification) {
+
+            if (($sentExpo || $sentFcm || $sentWeb) && $notification) {
                 $notification->update(['is_sent' => true]);
             }
 
-            return $sentExpo || $sentWeb;
+            return $sentExpo || $sentFcm || $sentWeb;
         } catch (\Exception $e) {
             Log::error("Error sending notification to user", [
                 'user_id' => $userId,
