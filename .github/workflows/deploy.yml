@@ -44,7 +44,10 @@ jobs:
         run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --no-scripts
 
       - name: Remove local Laravel caches before rsync
-        run: rm -f bootstrap/cache/config.php bootstrap/cache/routes*.php bootstrap/cache/events.php
+        run: |
+          rm -f bootstrap/cache/config.php bootstrap/cache/routes*.php bootstrap/cache/events.php
+          rm -f bootstrap/cache/packages.php bootstrap/cache/services.php
+          php artisan package:discover --ansi
 
       - name: Normalize shell scripts (LF)
         run: sed -i 's/\r$//' scripts/remote-optimize.sh

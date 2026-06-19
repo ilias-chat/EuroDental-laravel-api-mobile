@@ -16,6 +16,8 @@ storage/framework/views/*
 bootstrap/cache/config.php
 bootstrap/cache/routes*.php
 bootstrap/cache/events.php
+bootstrap/cache/packages.php
+bootstrap/cache/services.php
 .DS_Store
 Thumbs.db
 *.md

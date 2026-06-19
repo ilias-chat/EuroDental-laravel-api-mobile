@@ -43,6 +43,7 @@ mkdir -p storage/framework/cache storage/framework/sessions storage/framework/vi
 chmod -R 777 storage bootstrap/cache
 
 rm -f bootstrap/cache/config.php bootstrap/cache/routes-v7.php bootstrap/cache/routes.php bootstrap/cache/events.php
+rm -f bootstrap/cache/packages.php bootstrap/cache/services.php
 
 # Hostinger: site root uses public_html; Laravel app lives in sibling laravel-mobile/
 log "=== setup public_html ==="
@@ -108,6 +109,9 @@ fi
 
 log "PHP_BIN=$PHP_BIN"
 "$PHP_BIN" -v 2>&1 | tee -a "$DEBUG_LOG" || true
+
+log "=== package:discover ==="
+"$PHP_BIN" artisan package:discover --ansi 2>&1 | tee -a "$DEBUG_LOG" || true
 
 log "=== artisan --version ==="
 if ! "$PHP_BIN" artisan --version 2>&1 | tee -a "$DEBUG_LOG"; then
