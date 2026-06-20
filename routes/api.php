@@ -76,6 +76,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/tasks/{task}/services', [MobileTaskController::class, 'updateServices'])->whereNumber('task');
     Route::post('/tasks/{task}/propose-service', [ServicePropositionController::class, 'store'])->whereNumber('task');
 
+    Route::get('/deployments/past/count', [DeploymentController::class, 'pastDeploymentsCount']);
+    Route::get('/deployments/past', [DeploymentController::class, 'pastDeployments']);
     Route::get('/deployments/day', [DeploymentController::class, 'dayDeployments']);
     Route::get('/deployments/month', [DeploymentController::class, 'monthDeployments']);
     Route::get('/deployments/{id}', [DeploymentController::class, 'show'])->whereNumber('id');

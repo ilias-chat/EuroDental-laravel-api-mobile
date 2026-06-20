@@ -27,6 +27,7 @@ class TasksPastController extends Controller
                 $query->where('technician_id', Auth::id())
                     ->orWhereJsonContains('helping_user_ids', Auth::id());
             })
+            ->whereNull('deployment_id')
             ->where('task_date', '<', $today)
             ->whereNotIn('status', ['terminée', 'annulée'])
             ->orderBy('task_date', 'desc')

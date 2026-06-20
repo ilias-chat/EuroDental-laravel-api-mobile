@@ -76,6 +76,22 @@ class DeploymentController extends Controller
         return $isResponsible ? $deployment->tasks : $this->tasksForCurrentUser($deployment->tasks, $userId);
     }
 
+    private function deploymentHasIncompleteVisibleTasks(Deployment $deployment, ?int $userId): bool
+    {
+        return $this->tasksToShowInDeployment($deployment, $userId)->contains(function ($task) {
+            return ! in_array($task->status, ['terminée', 'annulée'], true);
+        });
+    }
+
+    private function filterPastIncompleteDeployments($deployments)
+    {
+        $userId = Auth::id();
+
+        return $deployments
+            ->filter(fn ($deployment) => $this->userIsInDeployment($deployment))
+            ->filter(fn ($deployment) => $this->deploymentHasIncompleteVisibleTasks($deployment, $userId));
+    }
+
     private function mapDeploymentSummary(Deployment $deployment): array
     {
         $userId = Auth::id();
@@ -126,6 +142,73 @@ class DeploymentController extends Controller
                 })->count() / $tasksToShow->count()) * 100)
                 : 0,
         ];
+    }
+
+    public function pastDeploymentsCount(): JsonResponse
+    {
+        try {
+            $deployments = Deployment::with(['tasks'])
+                ->whereDate('deployment_date', '<', Carbon::today()->toDateString())
+                ->orderBy('deployment_date', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            $count = $this->filterPastIncompleteDeployments($deployments)->count();
+
+            return response()->json([
+                'success' => true,
+                'count' => $count,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error in pastDeploymentsCount: '.$e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Une erreur est survenue lors du chargement des déplacements en retard',
+                'count' => 0,
+            ], 500);
+        }
+    }
+
+    public function pastDeployments(): JsonResponse
+    {
+        try {
+            $deployments = Deployment::with([
+                'responsible.image',
+                'driver.image',
+                'city',
+                'tasks.technician.image',
+                'tasks.client.image',
+                'tasks.client.city',
+            ])
+                ->whereDate('deployment_date', '<', Carbon::today()->toDateString())
+                ->orderBy('deployment_date', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            $pastDeployments = $this->filterPastIncompleteDeployments($deployments)
+                ->map(fn ($deployment) => $this->mapDeploymentSummary($deployment))
+                ->values();
+
+            return response()->json([
+                'success' => true,
+                'past_deployments' => $pastDeployments,
+                'count' => $pastDeployments->count(),
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error in pastDeployments: '.$e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Une erreur est survenue lors du chargement des déplacements en retard',
+                'past_deployments' => [],
+                'count' => 0,
+            ], 500);
+        }
     }
 
     public function dayDeployments(Request $request): JsonResponse
