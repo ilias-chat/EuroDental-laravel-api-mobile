@@ -16,7 +16,7 @@ class TicketMobileMapper
 
         return [
             'id' => $attachment->id,
-            'url' => asset('storage/'.$attachment->image->image_name),
+            'url' => storage_public_url($attachment->image->image_name),
         ];
     }
 

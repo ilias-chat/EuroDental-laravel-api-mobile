@@ -122,6 +122,9 @@ fi
 log "=== config:clear ==="
 "$PHP_BIN" artisan config:clear 2>&1 | tee -a "$DEBUG_LOG" || true
 
+log "=== storage:link ==="
+"$PHP_BIN" artisan storage:link 2>&1 | tee -a "$DEBUG_LOG" || true
+
 log "=== config:cache ==="
 if ! "$PHP_BIN" artisan config:cache 2>&1 | tee -a "$DEBUG_LOG"; then
   log "WARN: config:cache failed"
