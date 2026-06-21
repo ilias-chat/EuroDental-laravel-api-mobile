@@ -13,6 +13,7 @@ use App\Http\Controllers\API\ProductController;
 use App\Http\Controllers\API\ServiceController;
 use App\Http\Controllers\API\TaskController;
 use App\Http\Controllers\API\TaskTypeController;
+use App\Http\Controllers\API\TicketController;
 use App\Http\Controllers\API\TasksPastController;
 use App\Http\Controllers\API\UsersListController;
 use App\Http\Controllers\API\TasksRangeController;
@@ -80,6 +81,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/deployments/past', [DeploymentController::class, 'pastDeployments']);
     Route::get('/deployments/day', [DeploymentController::class, 'dayDeployments']);
     Route::get('/deployments/month', [DeploymentController::class, 'monthDeployments']);
+
+    Route::get('/tickets', [TicketController::class, 'index']);
+    Route::post('/tickets', [TicketController::class, 'store']);
+    Route::get('/tickets/{id}', [TicketController::class, 'show'])->whereNumber('id');
+    Route::post('/tickets/{id}/replies', [TicketController::class, 'storeReply'])->whereNumber('id');
+    Route::post('/tickets/{id}/resolve', [TicketController::class, 'resolve'])->whereNumber('id');
+    Route::patch('/tickets/{id}/status', [TicketController::class, 'updateStatus'])->whereNumber('id');
+
     Route::get('/deployments/{id}', [DeploymentController::class, 'show'])->whereNumber('id');
     Route::post('/deployments/{id}/expenses', [DeploymentController::class, 'storeExpense'])->whereNumber('id');
     Route::put('/deployments/{id}/expenses/{expenseId}', [DeploymentController::class, 'updateExpense'])->whereNumber(['id', 'expenseId']);
