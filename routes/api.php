@@ -20,6 +20,7 @@ use App\Http\Controllers\API\UsersListController;
 use App\Http\Controllers\API\TasksRangeController;
 use App\Http\Controllers\API\TasksTodayController;
 use App\Http\Controllers\Mobile\ServicePropositionController;
+use App\Http\Controllers\API\TasksTrackingRangeController;
 use App\Http\Controllers\Mobile\TaskController as MobileTaskController;
 use Illuminate\Support\Facades\Route;
 
@@ -50,6 +51,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/tasks/today', TasksTodayController::class);
     Route::get('/tasks/range', TasksRangeController::class);
     Route::get('/tasks/past', TasksPastController::class);
+
+    Route::middleware('permission:tasks_tracking')->group(function () {
+        Route::get('/tasks/tracking/users', [MobileTaskController::class, 'usersWithTasks']);
+        Route::get('/tasks/tracking/range', TasksTrackingRangeController::class);
+        Route::get('/tasks/tracking/{userId}', [MobileTaskController::class, 'tracking'])->whereNumber('userId');
+    });
+
     Route::get('/catalog/products', [ProductController::class, 'index']);
     Route::get('/leave-requests', [LeaveRequestController::class, 'index']);
     Route::post('/leave-requests', [LeaveRequestController::class, 'store']);
