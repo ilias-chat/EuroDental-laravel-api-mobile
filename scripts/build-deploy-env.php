@@ -38,8 +38,6 @@ if ($decoded === false || strlen($decoded) !== 32) {
 }
 
 $appUrl = getenv('APP_URL') ?: 'https://mobile.eurodental.ma';
-$assetUrl = getenv('ASSET_URL') ?: 'https://eurodental.ma';
-$publicStorageRoot = getenv('PUBLIC_STORAGE_ROOT') ?: '';
 $cors = getenv('CORS_ALLOWED_ORIGINS') ?: 'http://localhost:8100,http://127.0.0.1:8100,http://localhost:4200,http://127.0.0.1:4200,https://localhost,capacitor://localhost';
 
 $lines = [
@@ -65,15 +63,9 @@ $lines = [
     'QUEUE_CONNECTION=sync',
     'FILESYSTEM_DISK=local',
     '',
-    envLine('ASSET_URL', $assetUrl),
     envLine('CORS_ALLOWED_ORIGINS', $cors),
     '',
 ];
-
-if ($publicStorageRoot !== '') {
-    $lines[] = envLine('PUBLIC_STORAGE_ROOT', $publicStorageRoot);
-    $lines[] = '';
-}
 
 file_put_contents(__DIR__ . '/../.env', implode(PHP_EOL, $lines));
 echo "Wrote .env for deploy.\n";

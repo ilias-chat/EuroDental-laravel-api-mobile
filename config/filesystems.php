@@ -40,8 +40,8 @@ return [
 
         'public' => [
             'driver' => 'local',
-            'root' => env('PUBLIC_STORAGE_ROOT', storage_path('app/public')),
-            'url' => rtrim(env('ASSET_URL', env('APP_URL', 'http://localhost')), '/').'/storage',
+            'root' => storage_path('app/public'),
+            'url' => 'https://eurodental.ma/storage',
             'visibility' => 'public',
             'throw' => false,
             'report' => false,

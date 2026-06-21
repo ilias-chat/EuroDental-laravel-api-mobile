@@ -34,8 +34,6 @@ Workflow : `.github/workflows/deploy.yml` (push sur `main` ou **Run workflow** m
 | `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` | MySQL production (même base que eurodental) |
 | `CORS_ALLOWED_ORIGINS` | Origines de l’app Ionic |
 | `APP_URL` | optionnel — défaut `https://mobile.eurodental.ma` |
-| `ASSET_URL` | optionnel — défaut `https://eurodental.ma` |
-| `PUBLIC_STORAGE_ROOT` | optionnel — chemin absolu vers `laravel-eurodental/storage/app/public` (même serveur) pour que les pièces jointes tickets uploadées via l’API mobile soient servies par eurodental.ma |
 | `SSH_PRIVATE_KEY` | optionnel — non requis si `SSH_PASSWORD` est défini |
 
 ### hPanel (une fois)
@@ -63,11 +61,4 @@ Workflow : `.github/workflows/deploy.yml` (push sur `main` ou **Run workflow** m
 
 ## Assets (images)
 
-Configurer `ASSET_URL` vers l'URL publique de `laravel-eurodental` (ex. `http://127.0.0.1:8000`) pour les URLs `storage/`.
-
-En local, pointez aussi `PUBLIC_STORAGE_ROOT` vers le dossier public du projet principal, par ex. :
-
-```env
-ASSET_URL=http://127.0.0.1:8000
-PUBLIC_STORAGE_ROOT=C:/Users/ilias/Desktop/EuroDental/laravel-eurodental/storage/app/public
-```
+Les URLs `storage/` pointent en dur vers **https://eurodental.ma** (`storage_public_url()` dans `app/helpers.php`).
