@@ -804,9 +804,7 @@ class TaskController extends Controller
                 return [
                     'id' => $user->id,
                     'name' => $user->first_name . ' ' . $user->last_name,
-                    'image' => $user->image && $user->image->image_name 
-                        ? asset('storage/' . $user->image->image_name)
-                        : null,
+                    'image' => storage_public_url($user->image?->image_name),
                     'profile' => $user->profile ? $user->profile->profile_name : 'Non défini',
                     'profile_id' => $user->profile_id,
                     'tasks_count' => $mainTechTasks + $helpingTasks,
@@ -859,9 +857,7 @@ class TaskController extends Controller
                     'has_ongoing_visit' => false,
                     'user_id' => $event->user_id,
                     'user_name' => $event->user ? $event->user->first_name . ' ' . $event->user->last_name : null,
-                    'user_image' => $event->user && $event->user->image && $event->user->image->image_name 
-                        ? asset('storage/' . $event->user->image->image_name) 
-                        : null,
+                    'user_image' => storage_public_url($event->user?->image?->image_name),
                     'city_name' => $event->city ? $event->city->name : null
                 ];
             } else {
@@ -881,15 +877,12 @@ class TaskController extends Controller
                     'original_status' => $task->status,
                     'client_name' => $task->client ? $task->client->first_name . ' ' . $task->client->last_name : null,
                     'client_city' => $task->client && $task->client->city ? $task->client->city->name : null,
-                    'client_image' => $task->client && $task->client->image && $task->client->image->image_name 
-                        ? asset('storage/' . $task->client->image->image_name) 
-                        : 'https://ui-avatars.com/api/?name=' . urlencode($task->client ? $task->client->first_name . ' ' . $task->client->last_name : 'Client') . '&background=4F46E5&color=fff',
+                    'client_image' => storage_public_url($task->client?->image?->image_name)
+                        ?? 'https://ui-avatars.com/api/?name=' . urlencode($task->client ? $task->client->first_name . ' ' . $task->client->last_name : 'Client') . '&background=4F46E5&color=fff',
                     'has_ongoing_visit' => (bool) ($task->has_ongoing_visit ?? false),
                     'user_id' => $event->user_id,
                     'user_name' => $event->user ? $event->user->first_name . ' ' . $event->user->last_name : null,
-                    'user_image' => $event->user && $event->user->image && $event->user->image->image_name 
-                        ? asset('storage/' . $event->user->image->image_name) 
-                        : null,
+                    'user_image' => storage_public_url($event->user?->image?->image_name),
                     'city_name' => null
                 ];
             }
