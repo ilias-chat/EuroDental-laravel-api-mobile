@@ -12,6 +12,7 @@ use App\Http\Controllers\API\ProposedTaskController;
 use App\Http\Controllers\API\ProductController;
 use App\Http\Controllers\API\ServiceController;
 use App\Http\Controllers\API\TaskController;
+use App\Http\Controllers\API\TaskCreateClientController;
 use App\Http\Controllers\API\TaskTypeController;
 use App\Http\Controllers\API\TicketController;
 use App\Http\Controllers\API\TasksPastController;
@@ -44,6 +45,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/services', [ServiceController::class, 'getAll']);
     Route::get('/users', UsersListController::class);
     Route::get('/task-types', [TaskTypeController::class, 'index']);
+    Route::get('/tasks/create/clients', [TaskCreateClientController::class, 'index']);
     Route::get('/clients/search', [ClientController::class, 'search']);
     Route::get('/tasks/today', TasksTodayController::class);
     Route::get('/tasks/range', TasksRangeController::class);
