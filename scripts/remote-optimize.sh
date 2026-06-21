@@ -122,6 +122,26 @@ fi
 log "=== config:clear ==="
 "$PHP_BIN" artisan config:clear 2>&1 | tee -a "$DEBUG_LOG" || true
 
+log "=== eurodental shared storage (eurodental.ma uploads) ==="
+DOMAINS_DIR="$(dirname "$(dirname "$DEPLOY_PATH")")"
+EURODENTAL_DOMAIN="$DOMAINS_DIR/eurodental.ma"
+SHARED_STORAGE=""
+if [ -d "$EURODENTAL_DOMAIN" ]; then
+  SHARED_STORAGE=$(find "$EURODENTAL_DOMAIN" -maxdepth 5 -type d -path '*/storage/app/public' 2>/dev/null | head -n 1)
+fi
+if [ -n "$SHARED_STORAGE" ] && [ -d "$SHARED_STORAGE" ]; then
+  log "PUBLIC_STORAGE_ROOT=$SHARED_STORAGE"
+  if grep -q '^PUBLIC_STORAGE_ROOT=' .env 2>/dev/null; then
+    sed -i "s|^PUBLIC_STORAGE_ROOT=.*|PUBLIC_STORAGE_ROOT=\"$SHARED_STORAGE\"|" .env
+  else
+    printf '\nPUBLIC_STORAGE_ROOT="%s"\n' "$SHARED_STORAGE" >> .env
+  fi
+  mkdir -p "$SHARED_STORAGE/tickets"
+  chmod -R 775 "$SHARED_STORAGE/tickets" 2>/dev/null || chmod -R 777 "$SHARED_STORAGE/tickets" 2>/dev/null || true
+else
+  log "WARN: could not find eurodental.ma storage/app/public under $EURODENTAL_DOMAIN"
+fi
+
 log "=== storage:link ==="
 "$PHP_BIN" artisan storage:link 2>&1 | tee -a "$DEBUG_LOG" || true
 

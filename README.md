@@ -61,4 +61,7 @@ Workflow : `.github/workflows/deploy.yml` (push sur `main` ou **Run workflow** m
 
 ## Assets (images)
 
-Les URLs `storage/` pointent en dur vers **https://eurodental.ma** (`storage_public_url()` dans `app/helpers.php`).
+Ticket attachments and other public uploads are stored on **eurodental.ma** (`config/eurodental.php`):
+
+- URLs: `https://eurodental.ma/storage/...` (`storage_public_url()`)
+- Disk root: sibling `../laravel-eurodental/storage/app/public` in local dev, or auto-detected on deploy (`PUBLIC_STORAGE_ROOT` written by `scripts/remote-optimize.sh` from the `eurodental.ma` Hostinger domain folder)

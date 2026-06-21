@@ -37,5 +37,5 @@ function storage_public_url(?string $imageName): ?string
 
     $relative = 'storage/' . ltrim(str_replace('\\', '/', $imageName), '/');
 
-    return 'https://eurodental.ma/' . $relative;
+    return rtrim((string) config('eurodental.asset_base', 'https://eurodental.ma'), '/') . '/' . $relative;
 }

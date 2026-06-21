@@ -15,6 +15,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 
 class TicketController extends Controller
 {
@@ -242,6 +243,8 @@ class TicketController extends Controller
 
     private function storeAttachment(Ticket $ticket, ?TicketReply $reply, $file): void
     {
+        $disk = Storage::disk('public');
+        $disk->makeDirectory('tickets');
         $path = $file->store('tickets', 'public');
         $image = Image::create(['image_name' => $path]);
         TicketAttachment::create([
