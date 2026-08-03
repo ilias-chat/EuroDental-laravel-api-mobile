@@ -8,7 +8,7 @@ return [
 
     'allowed_origins' => array_values(array_filter(array_map(
         'trim',
-        explode(',', env('CORS_ALLOWED_ORIGINS', 'http://localhost:4200,http://127.0.0.1:4200'))
+        explode(',', env('CORS_ALLOWED_ORIGINS', 'http://localhost:4200,http://127.0.0.1:4200,https://pwa.eurodental.ma'))
     ))),
 
     'allowed_origins_patterns' => [],
