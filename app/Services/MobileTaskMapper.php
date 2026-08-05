@@ -31,6 +31,7 @@ class MobileTaskMapper
 
         return [
             'id' => $task->id,
+            'reference' => $task->reference,
             'client_id' => $task->client_id,
             'task_name' => $task->task_name,
             'task_type' => $task->task_type,

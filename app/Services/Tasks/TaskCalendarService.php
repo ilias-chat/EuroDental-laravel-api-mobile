@@ -252,6 +252,7 @@ class TaskCalendarService
     {
         return [
             'id' => $task->id,
+            'reference' => $task->reference,
             'task_name' => $task->task_name,
             'task_type' => $task->task_type,
             'description' => $task->description,

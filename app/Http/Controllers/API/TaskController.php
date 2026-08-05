@@ -133,6 +133,7 @@ class TaskController extends Controller
 
         $responseTask = [
             'id' => $task->id,
+            'reference' => $task->reference,
             'client_id' => $task->client_id,
             'task_name' => $task->task_name,
             'task_type' => $task->task_type,
@@ -287,4 +288,4 @@ class TaskController extends Controller
             'description' => $task->description,
         ]);
     }
-} 
+}

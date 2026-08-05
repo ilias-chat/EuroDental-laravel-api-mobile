@@ -360,6 +360,7 @@ class TaskController extends Controller
         
         $request->validate([
             'task_name' => 'required|string|max:255',
+            'reference' => 'nullable|string|max:64|unique:tasks,reference',
             'task_type' => 'required|string',
             'description' => 'nullable|string',
             'client_id' => 'nullable|exists:clients,id',
@@ -372,6 +373,7 @@ class TaskController extends Controller
 
         try {
             $task = Task::create([
+                'reference' => $request->reference,
                 'task_name' => $request->task_name,
                 'task_type' => $request->task_type,
                 'description' => $request->description ?: null,

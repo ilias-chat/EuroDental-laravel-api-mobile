@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class Task extends Model
 {
@@ -24,7 +25,29 @@ class Task extends Model
     const STATUS_TERMINEE = 'terminée';
     const STATUS_ANNULEE = 'annulée';
 
-    protected $fillable = ['task_name', 'task_type', 'description', 'status', 'urgent', 'technician_id', 'create_by', 'client_id', 'deployment_id', 'task_date', 'observation', 'started_at', 'finished_at', 'has_ongoing_visit', 'canceled_at', 'cancellation_reason', 'helping_user_ids', 'is_paid', 'hourly_rate', 'amount_paid', 'incomplete_reason', 'admin_delivery_amount', 'admin_delivery_task_id', 'admin_delivery_received_by_user_id'];
+    protected $fillable = ['reference', 'task_name', 'task_type', 'description', 'status', 'urgent', 'technician_id', 'create_by', 'client_id', 'deployment_id', 'task_date', 'observation', 'started_at', 'finished_at', 'has_ongoing_visit', 'canceled_at', 'cancellation_reason', 'helping_user_ids', 'is_paid', 'hourly_rate', 'amount_paid', 'incomplete_reason', 'admin_delivery_amount', 'admin_delivery_task_id', 'admin_delivery_received_by_user_id'];
+
+    protected static function booted(): void
+    {
+        static::creating(function (Task $task) {
+            if (filled($task->reference)) {
+                return;
+            }
+
+            // The ID is not available until after insert, but the column is required.
+            $task->reference = 'TMP-' . Str::upper((string) Str::ulid());
+        });
+
+        static::created(function (Task $task) {
+            if (!Str::startsWith((string) $task->reference, 'TMP-')) {
+                return;
+            }
+
+            $task->forceFill([
+                'reference' => sprintf('TSK-%08d', $task->getKey()),
+            ])->saveQuietly();
+        });
+    }
 
     protected $casts = [
         'helping_user_ids' => 'array',
