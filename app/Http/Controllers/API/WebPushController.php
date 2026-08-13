@@ -9,6 +9,13 @@ use Illuminate\Http\Request;
 
 class WebPushController extends Controller
 {
+    public function publicKey(): JsonResponse
+    {
+        return response()->json([
+            'public_key' => config('services.webpush.vapid.public_key'),
+        ]);
+    }
+
     public function subscribe(Request $request): JsonResponse
     {
         $request->validate([

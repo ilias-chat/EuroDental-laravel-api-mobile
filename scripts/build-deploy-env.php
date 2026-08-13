@@ -70,6 +70,10 @@ $lines = [
     '',
     envLine('CORS_ALLOWED_ORIGINS', $cors),
     '',
+    envLine('VAPID_PUBLIC_KEY', getenv('VAPID_PUBLIC_KEY') ?: ''),
+    envLine('VAPID_PRIVATE_KEY', getenv('VAPID_PRIVATE_KEY') ?: ''),
+    envLine('VAPID_SUBJECT', getenv('VAPID_SUBJECT') ?: 'mailto:contact@eurodental.ma'),
+    '',
 ];
 
 file_put_contents(__DIR__ . '/../.env', implode(PHP_EOL, $lines));

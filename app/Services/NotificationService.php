@@ -142,10 +142,9 @@ class NotificationService
             foreach ($subs as $s) {
                 $subscription = Subscription::create([
                     'endpoint' => $s->endpoint,
-                    'keys' => [
-                        'p256dh' => $s->p256dh,
-                        'auth' => $s->auth,
-                    ],
+                    'publicKey' => $s->p256dh,
+                    'authToken' => $s->auth,
+                    'contentEncoding' => $s->content_encoding ?: 'aes128gcm',
                 ]);
 
                 $report = $webPush->sendOneNotification($subscription, $payload);

@@ -40,6 +40,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/push-token', [PushTokenController::class, 'store']);
     Route::delete('/push-token', [PushTokenController::class, 'destroy']);
+    Route::get('/webpush/vapid-public-key', [WebPushController::class, 'publicKey']);
     Route::post('/webpush/subscribe', [WebPushController::class, 'subscribe']);
     Route::post('/webpush/unsubscribe', [WebPushController::class, 'unsubscribe']);
 
