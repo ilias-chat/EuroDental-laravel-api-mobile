@@ -135,6 +135,8 @@ class NotificationService
             $payload = json_encode([
                 'title' => $title,
                 'body' => $body,
+                'icon' => '/icons/notification-icon-192.png',
+                'badge' => '/icons/notification-icon-96.png',
                 'data' => $data,
             ]);
 
