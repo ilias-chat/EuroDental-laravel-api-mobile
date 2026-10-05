@@ -8,6 +8,7 @@ use App\Models\Task;
 use App\Models\TaskEvent;
 use App\Models\ServiceProposition;
 use App\Models\User;
+use App\Services\TaskAccess;
 use Illuminate\Support\Facades\Auth;
 
 class TaskController extends Controller
@@ -62,6 +63,10 @@ class TaskController extends Controller
                 'success' => false,
                 'message' => 'Task not found'
             ], 404);
+        }
+
+        if (! TaskAccess::canView(Auth::user(), $task)) {
+            return response()->json(['success' => false, 'message' => 'Non autorisé'], 403);
         }
 
         $helpingUsers = [];
@@ -135,6 +140,7 @@ class TaskController extends Controller
             'id' => $task->id,
             'reference' => $task->reference,
             'client_id' => $task->client_id,
+            'deployment_id' => $task->deployment_id,
             'task_name' => $task->task_name,
             'task_type' => $task->task_type,
             'description' => $task->description,
@@ -203,6 +209,37 @@ class TaskController extends Controller
             'success' => true,
             'task' => $responseTask,
         ]);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $task = Task::findOrFail($id);
+        if (! TaskAccess::canEdit($request->user(), $task)) {
+            return response()->json(['success' => false, 'message' => 'Non autorisé'], 403);
+        }
+
+        $validated = $request->validate([
+            'task_name' => 'required|string|max:255',
+            'reference' => 'required|string|max:64|unique:tasks,reference,'.$task->id,
+            'task_type' => 'required|string',
+            'description' => 'nullable|string',
+            'client_id' => 'nullable|exists:clients,id',
+            'task_date' => 'required|date',
+            'technician_id' => 'nullable|exists:users,id',
+            'helping_user_ids' => 'nullable|array',
+            'helping_user_ids.*' => 'integer|exists:users,id',
+        ]);
+
+        $validated['technician_id'] = TaskAccess::canViewAll($request->user())
+            ? ($validated['technician_id'] ?? $task->technician_id)
+            : $request->user()->id;
+        $validated['helping_user_ids'] = array_values(array_unique(array_filter(
+            $validated['helping_user_ids'] ?? [],
+            fn ($userId) => (int) $userId !== (int) $validated['technician_id']
+        )));
+        $task->update($validated);
+
+        return response()->json(['success' => true, 'message' => 'Tâche mise à jour', 'task' => ['id' => $task->id]]);
     }
 
     /**
@@ -276,6 +313,10 @@ class TaskController extends Controller
                 'success' => false,
                 'message' => 'Task not found'
             ], 404);
+        }
+
+        if (! TaskAccess::canEdit($request->user(), $task)) {
+            return response()->json(['success' => false, 'message' => 'Non autorisé'], 403);
         }
 
         $task->update([

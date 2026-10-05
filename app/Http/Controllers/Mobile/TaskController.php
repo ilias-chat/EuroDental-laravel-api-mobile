@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Mail;
 use Carbon\Carbon;
 use App\Services\NotificationService;
 use App\Services\WarrantyService;
+use App\Services\TaskAccess;
 use App\Mail\TaskAssignedMail;
 use App\Mail\TaskProposedMail;
 
@@ -356,6 +357,10 @@ class TaskController extends Controller
 
     public function store(Request $request)
     {
+        if (! TaskAccess::canWrite($request->user())) {
+            return response()->json(['success' => false, 'message' => 'Non autorisé'], 403);
+        }
+
         \Log::info('Create task request data:', $request->all());
         
         $request->validate([
@@ -371,6 +376,11 @@ class TaskController extends Controller
             'helping_user_ids.*' => 'exists:users,id'
         ]);
 
+        $canAssignMainTechnician = TaskAccess::canViewAll($request->user());
+        $technicianId = $canAssignMainTechnician && $request->filled('technician_id')
+            ? (int) $request->input('technician_id')
+            : Auth::id();
+
         try {
             $task = Task::create([
                 'reference' => $request->reference,
@@ -379,7 +389,7 @@ class TaskController extends Controller
                 'description' => $request->description ?: null,
                 'client_id' => $request->client_id,
                 'task_date' => $request->task_date,
-                'technician_id' => $request->technician_id ?? Auth::id(),
+                'technician_id' => $technicianId,
                 'create_by' => Auth::id(),
                 'status' => 'en attente',
                 'urgent' => false,
@@ -398,7 +408,6 @@ class TaskController extends Controller
         }
 
         // Send push notification and email to technician if assigned
-        $technicianId = $request->technician_id;
         if ($technicianId && $technicianId != Auth::id()) {
             try {
                 $notificationService = app(NotificationService::class);
@@ -1347,12 +1356,8 @@ class TaskController extends Controller
     public function getTaskEvents(Request $request, $taskId)
     {
         $task = Task::with(['events.user.image', 'adminDeliveryReceivedByUser'])->findOrFail($taskId);
-        
-        // Check if user has permission to view this task
-        $userPermissions = Auth::user()->profile->permissions->pluck('code');
-        if ($task->technician_id !== Auth::id() && 
-            !$userPermissions->contains('mobile_tasks_write') && 
-            !$userPermissions->contains('mobile_admin_tasks')) {
+
+        if (! TaskAccess::canView($request->user(), $task)) {
             return response()->json(['success' => false, 'message' => 'Non autorisé'], 403);
         }
 
@@ -1940,6 +1945,9 @@ class TaskController extends Controller
     public function getUserLastEventForTask(Request $request, $taskId)
     {
         $task = Task::findOrFail($taskId);
+        if (! TaskAccess::canView($request->user(), $task)) {
+            return response()->json(['success' => false, 'message' => 'Non autorisé'], 403);
+        }
         $userId = $request->get('user_id', Auth::id());
         $lastEvent = $task->getUserLastEventByTask($userId, $taskId);
 

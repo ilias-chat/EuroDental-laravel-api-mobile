@@ -70,6 +70,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/proposed-tasks/{id}', [ProposedTaskController::class, 'update'])->whereNumber('id');
     Route::delete('/proposed-tasks/{id}', [ProposedTaskController::class, 'destroy'])->whereNumber('id');
     Route::get('/tasks/{id}', [TaskController::class, 'show'])->whereNumber('id');
+    Route::put('/tasks/{id}', [TaskController::class, 'update'])->whereNumber('id');
     Route::post('/tasks', [MobileTaskController::class, 'store']);
     Route::get('/tasks/{task}/events', [MobileTaskController::class, 'getTaskEvents'])->whereNumber('task');
     Route::get('/tasks/{task}/user-last-event', [MobileTaskController::class, 'getUserLastEventForTask'])->whereNumber('task');
