@@ -5,7 +5,6 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use App\Models\Task;
 use App\Services\MobileTaskMapper;
-use App\Services\TaskAccess;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -24,12 +23,11 @@ class TasksPastController extends Controller
             'technician.image',
             'adminDeliveryReceivedByUser',
         ]);
-        if (! TaskAccess::canViewAll(Auth::user())) {
-            $tasksQuery->where(function ($query) {
-                $query->where('technician_id', Auth::id())
-                    ->orWhereJsonContains('helping_user_ids', Auth::id());
-            });
-        }
+        // Overdue tasks are a personal queue, regardless of global task access.
+        $tasksQuery->where(function ($query) {
+            $query->where('technician_id', Auth::id())
+                ->orWhereJsonContains('helping_user_ids', Auth::id());
+        });
 
         $pastTasks = $tasksQuery
             ->whereNull('deployment_id')
