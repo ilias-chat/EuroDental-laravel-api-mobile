@@ -28,7 +28,7 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 Route::get('/webpush/vapid-public-key', [WebPushController::class, 'publicKey']);
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'temporary.mobile.usage'])->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
 
     // Notifications (Ionic app + API clients)
