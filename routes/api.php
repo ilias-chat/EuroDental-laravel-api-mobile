@@ -13,6 +13,7 @@ use App\Http\Controllers\API\ProductController;
 use App\Http\Controllers\API\ServiceController;
 use App\Http\Controllers\API\TaskController;
 use App\Http\Controllers\API\TaskCommentController;
+use App\Http\Controllers\API\TaskFollowController;
 use App\Http\Controllers\API\TaskCreateClientController;
 use App\Http\Controllers\API\TaskTypeController;
 use App\Http\Controllers\API\TicketController;
@@ -72,6 +73,9 @@ Route::middleware(['auth:sanctum', 'temporary.mobile.usage'])->group(function ()
     Route::delete('/proposed-tasks/{id}', [ProposedTaskController::class, 'destroy'])->whereNumber('id');
     Route::get('/tasks/{id}', [TaskController::class, 'show'])->whereNumber('id');
     Route::get('/tasks/{task}/comments', [TaskCommentController::class, 'index'])->whereNumber('task');
+    Route::get('/tasks/{task}/follow', [TaskFollowController::class, 'show'])->whereNumber('task');
+    Route::post('/tasks/{task}/follow', [TaskFollowController::class, 'store'])->whereNumber('task');
+    Route::delete('/tasks/{task}/follow', [TaskFollowController::class, 'destroy'])->whereNumber('task');
     Route::post('/tasks/{task}/comments', [TaskCommentController::class, 'store'])->whereNumber('task')->middleware('throttle:30,1');
     Route::post('/tasks/{task}/comments/read', [TaskCommentController::class, 'markRead'])->whereNumber('task');
     Route::put('/tasks/{id}', [TaskController::class, 'update'])->whereNumber('id');

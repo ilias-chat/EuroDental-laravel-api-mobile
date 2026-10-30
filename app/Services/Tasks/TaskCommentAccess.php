@@ -19,7 +19,13 @@ class TaskCommentAccess
             || ($permissions->contains('tasks_view_all') && $permissions->contains('tasks_write'));
     }
 
-    private function participant(User $user, Task $task): bool
+    public function canFollow(User $user): bool
+    {
+        $permissions = $this->permissions($user);
+        return $permissions->contains('tasks_view_all') && $permissions->contains('tasks_write');
+    }
+
+    public function participant(User $user, Task $task): bool
     {
         return (int) $task->technician_id === (int) $user->id
             || in_array((int) $user->id, array_map('intval', $task->helping_user_ids ?? []), true);

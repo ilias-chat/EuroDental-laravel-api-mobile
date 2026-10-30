@@ -5,18 +5,26 @@ namespace App\Services\Tasks;
 use App\Models\Notification;
 use App\Models\Task;
 use App\Models\TaskComment;
+use App\Models\TaskFollower;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class TaskCommentNotifications
 {
     // Called while the task row is locked: concurrent comments share one unread item.
     public function record(Task $task, TaskComment $comment, User $author): void
     {
-        $ids = collect([$task->technician_id, ...($task->helping_user_ids ?? [])])
+        // Preserve participant notifications during a rolling deployment before the new table is installed.
+        $followers = Schema::hasTable('task_followers')
+            ? TaskFollower::where('task_id', $task->id)->pluck('user_id')->all() : [];
+        $participantIds = array_map('intval', [$task->technician_id, ...($task->helping_user_ids ?? [])]);
+        $ids = collect([...$participantIds, ...$followers])
             ->map(fn ($id) => (int) $id)->filter()->unique()->reject(fn ($id) => $id === (int) $author->id);
         $name = trim($author->first_name . ' ' . $author->last_name);
-        foreach (User::whereIn('id', $ids)->get() as $recipient) {
+        foreach (User::with('profile.permissions')->whereIn('id', $ids)->get() as $recipient) {
+            // Following never grants access: recheck admin permissions on every comment.
+            if (!in_array((int) $recipient->id, $participantIds, true) && !app(TaskCommentAccess::class)->canFollow($recipient)) continue;
             $notification = $this->unread($recipient, $task)->lockForUpdate()->first();
             $count = (int) ($notification?->data['comment_count'] ?? 0) + 1;
             $values = [

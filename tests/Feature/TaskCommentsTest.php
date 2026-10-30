@@ -6,6 +6,7 @@ use App\Models\Permission;
 use App\Models\Profile;
 use App\Models\Task;
 use App\Models\TaskComment;
+use App\Models\TaskFollower;
 use App\Models\Notification;
 use App\Services\Tasks\TaskCommentPush;
 use App\Models\User;
@@ -40,6 +41,11 @@ class TaskCommentsTest extends TestCase
             $table->boolean('is_sent')->default(false); $table->timestamps();
         });
         $this->mock(TaskCommentPush::class)->shouldReceive('deliver')->andReturnNull();
+        Schema::create('task_followers', function (Blueprint $table) {
+            $table->id(); $table->foreignId('task_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete(); $table->timestamps();
+            $table->unique(['task_id', 'user_id']);
+        });
     }
 
     public function test_main_technician_can_post_and_author_cannot_be_spoofed(): void
@@ -184,6 +190,107 @@ class TaskCommentsTest extends TestCase
         $this->assertSame(1, TaskComment::count());
         $this->assertSame(1, Notification::count());
         $this->assertFalse(Notification::first()->is_sent);
+    }
+
+
+    public function test_admin_can_follow_and_unfollow_only_for_self_without_changing_team(): void
+    {
+        $main = $this->user(); $manager = $this->user(['tasks_read', 'tasks_view_all', 'tasks_write']);
+        $other = $this->user(); $task = $this->task($main);
+        Sanctum::actingAs($manager);
+        $this->getJson("/api/tasks/{$task->id}/follow")->assertOk()->assertJsonPath('following', false)->assertJsonPath('can_follow', true)->assertJsonPath('participant', false);
+        for ($i = 0; $i < 2; $i++) {
+            $this->postJson("/api/tasks/{$task->id}/follow", ['user_id' => $other->id])->assertOk()->assertJsonPath('following', true);
+        }
+        $this->assertSame(1, TaskFollower::count());
+        $this->assertSame($manager->id, (int) TaskFollower::first()->user_id);
+        $this->assertSame($main->id, (int) $task->fresh()->technician_id);
+        $this->assertSame([], $task->fresh()->helping_user_ids);
+        Sanctum::actingAs($other);
+        $this->deleteJson("/api/tasks/{$task->id}/follow")->assertForbidden();
+        $this->assertSame(1, TaskFollower::count());
+        Sanctum::actingAs($manager);
+        $this->deleteJson("/api/tasks/{$task->id}/follow")->assertOk()->assertJsonPath('following', false);
+        $this->deleteJson("/api/tasks/{$task->id}/follow")->assertOk();
+        $this->assertSame(0, TaskFollower::count());
+    }
+
+    public function test_follow_requires_global_view_and_write_permissions(): void
+    {
+        $task = $this->task($this->user());
+        Sanctum::actingAs($this->user(['tasks_read', 'tasks_view_all']));
+        $this->getJson("/api/tasks/{$task->id}/follow")->assertOk()->assertJsonPath('can_follow', false);
+        $this->postJson("/api/tasks/{$task->id}/follow")->assertForbidden();
+        Sanctum::actingAs($this->user(['tasks_read', 'tasks_write']));
+        $this->getJson("/api/tasks/{$task->id}/follow")->assertForbidden();
+        $this->postJson("/api/tasks/{$task->id}/follow")->assertForbidden();
+        $this->assertSame(0, TaskFollower::count());
+    }
+
+    public function test_followed_admin_receives_grouped_comments_and_unfollow_stops_new_notifications(): void
+    {
+        $main = $this->user(); $manager = $this->user(['tasks_read', 'tasks_view_all', 'tasks_write']);
+        $task = $this->task($main); Sanctum::actingAs($manager);
+        $this->postJson("/api/tasks/{$task->id}/follow")->assertOk();
+        Sanctum::actingAs($main);
+        for ($i = 0; $i < 2; $i++) $this->postJson("/api/tasks/{$task->id}/comments", ['body' => 'Note equipe'])->assertCreated();
+        $this->assertSame(1, Notification::count());
+        $this->assertSame($manager->id, (int) Notification::first()->user_id);
+        $this->assertSame(2, Notification::first()->data['comment_count']);
+        Sanctum::actingAs($manager);
+        $this->deleteJson("/api/tasks/{$task->id}/follow")->assertOk();
+        Sanctum::actingAs($main);
+        $this->postJson("/api/tasks/{$task->id}/comments", ['body' => 'Apres desabonnement'])->assertCreated();
+        $this->assertSame(2, Notification::first()->data['comment_count']);
+    }
+
+    public function test_following_admin_is_not_notified_about_own_comment(): void
+    {
+        $manager = $this->user(['tasks_read', 'tasks_view_all', 'tasks_write']);
+        $task = $this->task($this->user()); Sanctum::actingAs($manager);
+        $this->postJson("/api/tasks/{$task->id}/follow")->assertOk();
+        $this->postJson("/api/tasks/{$task->id}/comments", ['body' => 'Ma note'])->assertCreated();
+        $this->assertSame(0, Notification::where('user_id', $manager->id)->count());
+    }
+
+    public function test_team_member_and_follower_are_not_notified_twice_and_team_remains_automatic(): void
+    {
+        $main = $this->user(); $helper = $this->user(['tasks_read', 'tasks_view_all', 'tasks_write']);
+        $task = $this->task($main, [$helper->id]); Sanctum::actingAs($helper);
+        $this->getJson("/api/tasks/{$task->id}/follow")->assertOk()->assertJsonPath('participant', true);
+        $this->postJson("/api/tasks/{$task->id}/follow")->assertOk();
+        Sanctum::actingAs($main);
+        $this->postJson("/api/tasks/{$task->id}/comments", ['body' => 'Note'])->assertCreated();
+        $this->assertSame(1, Notification::count());
+        $this->assertSame(1, Notification::first()->data['comment_count']);
+        Sanctum::actingAs($helper);
+        $this->deleteJson("/api/tasks/{$task->id}/follow")->assertOk();
+        Sanctum::actingAs($main);
+        $this->postJson("/api/tasks/{$task->id}/comments", ['body' => 'Encore equipe'])->assertCreated();
+        $this->assertSame(2, Notification::first()->data['comment_count']);
+    }
+
+    public function test_follower_permissions_are_rechecked_and_readonly_user_can_unfollow(): void
+    {
+        $main = $this->user(); $manager = $this->user(['tasks_read', 'tasks_view_all', 'tasks_write']);
+        $task = $this->task($main); Sanctum::actingAs($manager);
+        $this->postJson("/api/tasks/{$task->id}/follow")->assertOk();
+        $manager->profile->permissions()->detach(Permission::where('code', 'tasks_write')->first()->id);
+        Sanctum::actingAs($main);
+        $this->postJson("/api/tasks/{$task->id}/comments", ['body' => 'Acces retire'])->assertCreated();
+        $this->assertSame(0, Notification::where('user_id', $manager->id)->count());
+        $manager->unsetRelation('profile'); Sanctum::actingAs($manager);
+        $this->getJson("/api/tasks/{$task->id}/follow")->assertOk()->assertJsonPath('can_follow', false)->assertJsonPath('following', true);
+        $this->deleteJson("/api/tasks/{$task->id}/follow")->assertOk()->assertJsonPath('following', false);
+    }
+
+    public function test_followers_are_removed_when_user_or_task_is_deleted(): void
+    {
+        $manager = $this->user(['tasks_read', 'tasks_view_all', 'tasks_write']); $task = $this->task($this->user());
+        TaskFollower::create(['task_id' => $task->id, 'user_id' => $manager->id]);
+        $manager->delete(); $this->assertSame(0, TaskFollower::count());
+        TaskFollower::create(['task_id' => $task->id, 'user_id' => $this->user()->id]);
+        $task->delete(); $this->assertSame(0, TaskFollower::count());
     }
 
     private function user(array $codes = ['tasks_read']): User
